@@ -1,12 +1,10 @@
 import { Record } from 'immutable'
-import { TILE_WIDTH, TILE_HEIGHT, PACMAN_SPEED } from 'constant'
+import { TILE_SIZE, PACMAN_SPEED } from 'constant'
 import { Direction } from 'types'
 import { coordinate2Pos } from 'utils'
 
-type State = 'idle' | 'moving' | 'dying'
-export type SpriteType = 'player' | 'enemy'
 const PacmanRecord = Record({
-  type: 'player' as SpriteType,
+  type: 'player',
   state: 'idle',
   col: 13,
   row: 17,
@@ -17,7 +15,7 @@ const PacmanRecord = Record({
   frameIndex: 0
 })
 
-export class Pacman extends PacmanRecord {
+export default class PacmanSprite extends PacmanRecord {
   getSpeed() {
     // TODO 根据type和state来返回玩家和敌人的速度
     let vx = 0
@@ -29,6 +27,7 @@ export class Pacman extends PacmanRecord {
     }
     return { vx, vy }
   }
+
   draw(ctx: CanvasRenderingContext2D) {
     const { col, row, frameIndex, dir } = this
     const { x, y } = coordinate2Pos(row, col)

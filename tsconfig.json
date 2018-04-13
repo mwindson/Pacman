@@ -7,10 +7,12 @@
     "moduleResolution": "node",
     "noStrictGenericChecks": true,
     "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
     "target": "es2015",
     "jsx": "react",
     "allowJs": true,
-    "baseUrl": "src/", // This must be specified if "paths" is.
+    "baseUrl": "src/",
+    // This must be specified if "paths" is.
     "paths": {
       "*": [
         "*"

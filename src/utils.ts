@@ -3,7 +3,7 @@ import { TILE_WIDTH, TILE_HEIGHT } from 'constant'
 import { Direction } from 'types'
 import { List } from 'immutable'
 import { Ghost } from 'sprites/ghost'
-import { Pacman } from 'Sprite'
+import { Pacman } from 'PacmanSprite.ts'
 
 export function getOppsiteDirection(x: Direction) {
   switch (x) {

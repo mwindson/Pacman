@@ -1,7 +1,7 @@
 import { Record, List } from 'immutable'
 import { Direction, SpriteType } from 'types'
 import { coordinate2Pos, findNearestTile } from 'utils'
-import { Pacman } from 'Sprite'
+import { PacmanSprite } from 'PacmanSprite.ts'
 import { GHOST_SPEED, TILE_SIZE } from 'constant'
 const GhostRecord = Record({
   type: 'enemy' as SpriteType,

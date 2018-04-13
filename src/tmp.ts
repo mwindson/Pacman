@@ -1,6 +1,6 @@
 import xs, { Stream } from 'xstream'
 import fromEvent from 'xstream/extra/fromEvent'
-import { Pacman } from 'Sprite'
+import { Pacman } from 'PacmanSprite.ts'
 import { isOnValidPath, pos2Coordinate, coordinate2Pos } from 'utils'
 import { Ghost } from 'sprites/ghost'
 import { TICKER_INTERVAL, BEAN_SCORE, POWER_BEAN_SCORE } from 'constant'

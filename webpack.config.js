@@ -7,7 +7,7 @@ module.exports = {
   context: __dirname,
   target: 'web',
 
-  entry: [__dirname + '/src/index.ts'],
+  entry: [__dirname + '/src/index.tsx'],
 
   output: {
     path: path.resolve(__dirname, 'build', packageInfo.version),
@@ -24,8 +24,21 @@ module.exports = {
     rules: [
       {
         test: /\.tsx?$/,
-        use: ['ts-loader'],
-        exclude: /node_modules/
+        use: [
+          {
+            loader: 'babel-loader',
+            options: {
+              plugins: ['react-hot-loader/babel'],
+            },
+          },
+          {
+            loader: 'ts-loader',
+            options: {
+              transpileOnly: true,
+            },
+          },
+        ],
+        exclude: /node_modules/,
       },
       {
         test: /\.css$/,

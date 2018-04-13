@@ -1,5 +1,5 @@
 import { Observable, Scheduler, Subject } from 'rxjs'
-import { Pacman } from 'Sprite'
+import { Pacman } from 'PacmanSprite.ts'
 import {
   isOnValidPath,
   pos2Coordinate,

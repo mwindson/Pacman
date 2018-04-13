@@ -1,5 +1,5 @@
-export const TILE_WIDTH = 16
-export const TILE_HEIGHT = 16
+export const SCREEN_WIDTH = 28
+export const SCREEN_HEIGHT = 36
 export const PACMAN_SPEED = 6
 export const TILE_SIZE = 16
 export const TICKER_INTERVAL = 17
