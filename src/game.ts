@@ -13,7 +13,7 @@ import {
 import { Ghost } from 'sprites/ghost'
 import { TICKER_INTERVAL, BEAN_SCORE, POWER_BEAN_SCORE, TILE_SIZE } from 'constant'
 import { List, Map, Record } from 'immutable'
-import { Direction } from 'types'
+import { Direction } from 'utils/types'
 export interface LevelData {
   map: List<string>
   wall_color: string
@@ -211,31 +211,31 @@ function game(levelData: LevelData, canvas: HTMLCanvasElement) {
     .startWith(initGame)
     .shareReplay(1)
 
-  const ticker$ = Observable.interval(TICKER_INTERVAL, Scheduler.animationFrame)
-    .map(() => ({ time: performance.now(), deltaTime: null as number }))
-    .scan((previous, current) => ({
-      time: current.time,
-      deltaTime: (current.time - previous.time) / 1000
-    }))
-
-  const input$ = Observable.fromEvent(document, 'keydown', (event: KeyboardEvent) => {
-    switch (event.keyCode) {
-      // [x,y]
-      case 37:
-        return 'left'
-      case 38:
-        return 'up'
-      case 39:
-        return 'right'
-      case 40:
-        return 'down'
-      default:
-        return 'idle'
-    }
-  })
-    .distinctUntilChanged()
-    .startWith('idle')
-    .shareReplay(1)
+  // const ticker$ = Observable.interval(TICKER_INTERVAL, Scheduler.animationFrame)
+  //   .map(() => ({ time: performance.now(), deltaTime: null as number }))
+  //   .scan((previous, current) => ({
+  //     time: current.time,
+  //     deltaTime: (current.time - previous.time) / 1000
+  //   }))
+  //
+  // const input$ = Observable.fromEvent(document, 'keydown', (event: KeyboardEvent) => {
+  //   switch (event.keyCode) {
+  //     // [x,y]
+  //     case 37:
+  //       return 'left'
+  //     case 38:
+  //       return 'up'
+  //     case 39:
+  //       return 'right'
+  //     case 40:
+  //       return 'down'
+  //     default:
+  //       return 'idle'
+  //   }
+  // })
+  //   .distinctUntilChanged()
+  //   .startWith('idle')
+  //   .shareReplay(1)
   // calculate next pacman
 
   const nextPacmanPos$ = ticker$.withLatestFrom(input$, game$).map(([{ deltaTime }, input, { pacman, map }]) => {

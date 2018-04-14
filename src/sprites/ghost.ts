@@ -1,8 +1,14 @@
-import { Record, List } from 'immutable'
-import { Direction, SpriteType } from 'types'
+import { Record, List, fromJS } from 'immutable'
+import { Direction, SpriteType } from 'utils/types'
 import { coordinate2Pos, findNearestTile } from 'utils'
-import { PacmanSprite } from 'PacmanSprite.ts'
 import { GHOST_SPEED, TILE_SIZE } from 'constant'
+import PacmanSprite from './PacmanSprite'
+
+const targetTile = fromJS({
+  col: 0,
+  row: 0,
+  dir: 'up',
+})
 const GhostRecord = Record({
   type: 'enemy' as SpriteType,
   state: 'idle',
@@ -17,17 +23,21 @@ const GhostRecord = Record({
   fearRemain: 3,
   dying: false,
   path: [List(), 0] as [List<TilePos>, number],
+  targetTile: null as typeof targetTile,
   width: 30,
   height: 30
 })
+
 interface TilePos {
   col: number
   row: number
 }
+
 export class Ghost extends GhostRecord {
   setStartPos(row: number, col: number) {
     return this.set('col', col).set('row', row)
   }
+
   draw(ctx: CanvasRenderingContext2D) {
     const { col, row, frameIndex, color } = this
     const { x, y } = coordinate2Pos(row, col)
@@ -51,6 +61,7 @@ export class Ghost extends GhostRecord {
     ctx.fill()
     ctx.closePath()
   }
+
   getSpeed() {
     // TODO 根据type和state来返回玩家和敌人的速度
     let vx = 0
@@ -62,13 +73,14 @@ export class Ghost extends GhostRecord {
     }
     return { vx, vy }
   }
+
   beFearing(pacmanEatPowerBean: Boolean) {
     if (!this.fearMode) {
       this.set('fearMode', true).set('fearRemain', 3)
     }
   }
 
-  move(pacman: Pacman, deltaTime: number, map: List<List<string>>, cannvas: HTMLCanvasElement) {
+  move(pacman: PacmanSprite, deltaTime: number, map: List<List<string>>, cannvas: HTMLCanvasElement) {
     const { row, col, dir } = this
     const startPos = findNearestTile(col, row, dir)
     let nextDir = dir

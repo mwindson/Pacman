@@ -1,9 +1,8 @@
-import { LevelData } from 'game'
-import { TILE_WIDTH, TILE_HEIGHT } from 'constant'
-import { Direction } from 'types'
+import { Direction } from 'utils/types'
 import { List } from 'immutable'
 import { Ghost } from 'sprites/ghost'
-import { Pacman } from 'PacmanSprite.ts'
+import { TILE_SIZE } from './constant'
+import PacmanSprite from './sprites/PacmanSprite'
 
 export function getOppsiteDirection(x: Direction) {
   switch (x) {
@@ -19,6 +18,7 @@ export function getOppsiteDirection(x: Direction) {
       return 'idle'
   }
 }
+
 export function getNextPos(s: Ghost | Pacman, deltaTime: number) {
   const { row, col } = s
   const { vx, vy } = s.getSpeed()
@@ -26,17 +26,19 @@ export function getNextPos(s: Ghost | Pacman, deltaTime: number) {
   const nr = row + deltaTime * vy
   return { nr, nc }
 }
+
 export function pos2Coordinate(x: number, y: number) {
-  return { x: round(x / TILE_WIDTH - 0.5), y: round(y / TILE_HEIGHT - 2.5) }
+  return { x: round(x / TILE_SIZE - 0.5), y: round(y / TILE_SIZE - 2.5) }
 }
+
 export function coordinate2Pos(i: number, j: number) {
-  return { x: (j + 0.5) * TILE_WIDTH, y: (i + 2.5) * TILE_HEIGHT }
+  return { x: (j + 0.5) * TILE_SIZE, y: (i + 2.5) * TILE_SIZE }
 }
+
 export function isOnValidPath(map: List<List<string>>, x: number, y: number, dir: Direction) {
   const { row, col } = findNearestTile(x, y, dir)
-  const block = ['X']
   // 左右移动时，判断
-  if (block.find(v => v === map.get(row).get(col))) {
+  if (map.get(row).get(col) === 'X') {
     return false
   }
   return true
@@ -63,6 +65,7 @@ export function findNearestTile(col: number, row: number, dir: Direction) {
   }
   return { col: c, row: r }
 }
+
 export function round(x: number, n = 2) {
   return Math.round(x * Math.pow(10, n)) / Math.pow(10, n)
 }
@@ -71,7 +74,8 @@ export interface TilePos {
   col: number
   row: number
 }
-export function calPathRouting(ghost: Ghost, pacman: Pacman, map: List<List<string>>) {
+
+export function calPathRouting(ghost: Ghost, pacman: PacmanSprite, map: List<List<string>>) {
   const { row, col, dir } = ghost
   const startPos = findNearestTile(col, row, dir)
   let nextDir = dir

@@ -26,6 +26,9 @@ export function game(state = new Game(), action: Action) {
   } else if (action.type === 'UPDATE_MAP') {
     const { map } = action
     return state.set('map', map)
+  } else if (action.type === 'UPDATE_PACMAN') {
+    const { pacman } = action
+    return state.set('pacman', pacman)
   }
   return state
 }

@@ -1,14 +1,14 @@
 import { Record } from 'immutable'
-import { TILE_SIZE, PACMAN_SPEED } from 'constant'
-import { Direction } from 'types'
+import { PACMAN_SPEED } from 'constant'
 import { coordinate2Pos } from 'utils'
+import { Direction } from '../utils/types'
 
 const PacmanRecord = Record({
   type: 'player',
   state: 'idle',
   col: 13,
   row: 17,
-  dir: 'idle' as Direction,
+  dir: null as Direction,
   life: 3,
   remain: 0.2,
   isMoving: true,

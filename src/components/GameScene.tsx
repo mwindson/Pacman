@@ -1,15 +1,16 @@
 import * as React from 'react'
 import { connect } from 'react-redux'
-import { List } from 'immutable'
-import { State } from '../reducers'
+import { State } from 'reducers'
+import { Game } from 'reducers/game'
 import { Dispatch } from 'redux'
-import PacmanSprite from 'sprites/PacmanSprite'
-import Pacman from 'components/Pacman'
 import { TILE_SIZE } from '../constant'
+import PacmanSprite from '../sprites/PacmanSprite'
+import Pacman from './Pacman'
+import { KeyPressAction } from '../utils/action'
 
 export interface GameSceneProps {
+  game: Game
   pacman: PacmanSprite
-  map: List<List<string>>
   dispatch: Dispatch<State>
 }
 
@@ -17,8 +18,36 @@ export interface GameSceneState {
 }
 
 class GameScene extends React.Component<GameSceneProps, GameSceneState> {
+  componentDidMount() {
+    document.addEventListener('keydown', this.keyInput)
+  }
+
+  componentWillUnmount() {
+    document.removeEventListener('keydown', this.keyInput)
+  }
+
+  keyInput = (event: KeyboardEvent) => {
+    const { dispatch } = this.props
+    switch (event.key) {
+      case "a":
+        dispatch<KeyPressAction>({ type: 'KEY_PRESS', dir: 'left' })
+        break
+      case "w":
+        dispatch<KeyPressAction>({ type: 'KEY_PRESS', dir: 'up' })
+        break
+      case "d":
+        dispatch<KeyPressAction>({ type: 'KEY_PRESS', dir: 'right' })
+        break
+      case "s":
+        dispatch<KeyPressAction>({ type: 'KEY_PRESS', dir: 'down' })
+        break
+      default:
+        break;
+    }
+  }
+
   render() {
-    const { map, pacman } = this.props
+    const { game: { map, pacman } } = this.props
     return <g className="game-scene">
       {map.map((row, i) => (
         <g className="game-scene-row">
@@ -38,7 +67,7 @@ class GameScene extends React.Component<GameSceneProps, GameSceneState> {
 }
 
 function mapStateToProps(state: State) {
-  return state.game.toObject() as any
+  return { game: state.game, pacman: state.pacman }
 }
 
 export default connect(mapStateToProps)(GameScene)
