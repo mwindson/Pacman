@@ -29,6 +29,9 @@ export function game(state = new Game(), action: Action) {
   } else if (action.type === 'UPDATE_PACMAN') {
     const { pacman } = action
     return state.set('pacman', pacman)
+  } else if (action.type === 'UPDATE_GHOSTS') {
+    const { ghosts } = action
+    return state.set('ghosts', ghosts)
   }
   return state
 }

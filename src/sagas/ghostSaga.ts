@@ -1,11 +1,12 @@
-import { fork, select, take } from 'redux-saga/effects'
-import { TickAction } from '../utils/action'
+import { fork, put, select, take } from 'redux-saga/effects'
+import { TickAction, UpdateGhosts } from '../utils/action'
 import { State } from '../reducers'
 import { fromJS, List } from 'immutable'
 import { Direction } from '../utils/types'
 import { getOppsiteDirection } from '../utils'
 
-function* ghostSaga() {
+export default function* ghostSaga() {
+  console.log('ghost saga started')
   yield fork(wanderMode)
 }
 
@@ -21,21 +22,22 @@ function* wanderMode() {
         let newTargetTile = ghost.targetTile
         let newGhost = ghost
         if (!newTargetTile) {
-          newTargetTile = getNewTargetTile(map, dir, row, col)
+          // todo 需要初始化计算
+          newTargetTile = fromJS({ col, row: row - 1, dir: 'left' })
           newGhost = ghost.set('targetTile', newTargetTile)
         }
         const nc = col + delta * vx
         const nr = row + delta * vy
         const { targetTile } = newGhost
         // 进入新的贴图
-        if (Math.floor(nc) === targetTile.get('tile').get(1) && Math.floor(nr) === targetTile.get('tile').get(0)) {
+        if (Math.floor(nc) === targetTile.get('col') && Math.floor(nr) === targetTile.get('row')) {
           newTargetTile = getNewTargetTile(map, targetTile.get('dir'), nr, nc)
           newGhost = ghost.set('dir', targetTile.get('dir')).set('targetTile', newTargetTile)
         }
-        // todo 测试
         return newGhost.set('col', nc).set('row', nr)
       }
     )
+    yield put<UpdateGhosts>({ type: 'UPDATE_GHOSTS', ghosts: newGhosts })
   }
 }
 
@@ -44,8 +46,9 @@ function* wanderMode() {
  * @param dir 鬼的行进方向
  * @param row 鬼当前纵向位置
  * @param col 鬼当前横向位置
+ * @param isFirst 是否为初始化targetTile
  * */
-function getNewTargetTile(map: List<List<string>>, dir: Direction, row: number, col: number) {
+function getNewTargetTile(map: List<List<string>>, dir: Direction, row: number, col: number, isFirst = false) {
   let r = Math.round(row)
   let c = Math.round(col)
   switch (dir) {
@@ -64,17 +67,18 @@ function getNewTargetTile(map: List<List<string>>, dir: Direction, row: number, 
   }
   const ds = [[-1, 0], [1, 0], [0, -1], [0, 1]]
   const dirs = fromJS(['up', 'down', 'left', 'right'])
-  const tiles = List([])
+  let targetDir = List([])
   for (let i = 0; i < ds.length; i += 1) {
     if (dirs.get(i) !== getOppsiteDirection(dir)) {
       if (map.get(r + ds[i][0]).get(c + ds[i][1]) !== 'X') {
-        tiles.push(fromJS({
-          tile: ds[i],
-          dir: dirs.get(i)
-        }))
+        targetDir = targetDir.push(dirs.get(i))
       }
     }
   }
-  return tiles.get(0)
+  return fromJS({
+    col: c,
+    row: r,
+    dir: targetDir.get(0)
+  })
 }
 

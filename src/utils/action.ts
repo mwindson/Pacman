@@ -3,15 +3,7 @@ import PacmanSprite from '../sprites/PacmanSprite'
 import { Ghost } from '../sprites/ghost'
 import { Direction } from './types'
 
-export type Action =
-  StartGame
-  | UpdatePacman
-  | UpdateMap
-  | UpdatePowerBeans
-  | UpdateScore
-  | UpdateGhosts
-  | TickAction
-  | UpdatePacmanDirection
+export type Action = StartGame | UpdatePacman | UpdateMap | UpdatePowerBeans | UpdateScore | UpdateGhosts | TickAction | UpdatePacmanDirection
 
 export interface StartGame {
   type: 'START_GAME'
@@ -52,7 +44,7 @@ interface UpdateScore {
   score: number
 }
 
-interface UpdateGhosts {
-  type: 'update-ghosts'
+export interface UpdateGhosts {
+  type: 'UPDATE_GHOSTS'
   ghosts: List<Ghost>
 }

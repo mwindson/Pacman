@@ -3,8 +3,8 @@ import { fromJS } from 'immutable'
 import { Action, KeyPressAction, TickAction, UpdatePacman, UpdatePacmanDirection } from 'utils/action'
 import tickerSaga from './tickerSaga'
 import { State } from '../reducers'
-import { Direction } from '../utils/types'
 import { getOppsiteDirection, isOnValidPath } from '../utils'
+import ghostSaga from './ghostSaga'
 
 
 export default function* rootSaga() {
@@ -25,6 +25,7 @@ function* startGame() {
   yield loadMap()
   yield fork(tickerSaga)
   yield fork(playerController)
+  yield fork(ghostSaga)
 }
 
 function* playerController() {
@@ -40,7 +41,6 @@ function* playerMove() {
     const { dir, col, row } = pacman
     let nextPacman = pacman.set('dir', input)
     const { vx, vy } = nextPacman.getSpeed()
-    console.log(vx * delta)
     const nc = col + delta * vx
     const nr = row + delta * vy
     if (isOnValidPath(map, nc, nr, input)) {

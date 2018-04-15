@@ -5,9 +5,9 @@ import { GHOST_SPEED, TILE_SIZE } from 'constant'
 import PacmanSprite from './PacmanSprite'
 
 const targetTile = fromJS({
-  col: 0,
-  row: 0,
-  dir: 'up',
+  col: 14,
+  row: 14,
+  dir: 'left',
 })
 const GhostRecord = Record({
   type: 'enemy' as SpriteType,
