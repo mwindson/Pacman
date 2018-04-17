@@ -49,21 +49,23 @@ class GameScene extends React.Component<GameSceneProps, GameSceneState> {
 
   render() {
     const { game: { map, pacman, ghosts } } = this.props
-    return <g className="game-scene">
+    return <g className="game-scene" transform={`translate(${TILE_SIZE},${TILE_SIZE})`}>
       {map.map((row, i) => (
         <g key={`row-${i}`} className="game-scene-row">
           {row.map((col, j) => (
             <rect key={j}
-                  x={j * TILE_SIZE}
-                  y={i * TILE_SIZE}
+                  x={j * TILE_SIZE - TILE_SIZE / 2}
+                  y={i * TILE_SIZE - TILE_SIZE / 2}
                   fill={col === 'X' ? 'skyblue' : 'gray'}
                   width={TILE_SIZE}
-                  height={TILE_SIZE} />
+                  height={TILE_SIZE}
+                  stroke={"black"} />
           ))}
         </g>
       ))}
-      <Pacman x={pacman.col * TILE_SIZE} y={pacman.row * TILE_SIZE} />
-      {ghosts.map((g, i) => (<Ghost key={`ghost-${i}`} x={g.col * TILE_SIZE} y={g.row * TILE_SIZE} target={g.targetTile} />))}
+      <Pacman x={pacman.col * TILE_SIZE - TILE_SIZE / 2} y={pacman.row * TILE_SIZE - TILE_SIZE / 2} />
+      {ghosts.map((g, i) => (
+        <Ghost key={`ghost-${i}`} x={g.col * TILE_SIZE - TILE_SIZE / 2} y={g.row * TILE_SIZE - TILE_SIZE / 2} target={g.targetTile} />))}
     </g>
   }
 }

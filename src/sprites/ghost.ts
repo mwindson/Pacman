@@ -34,9 +34,6 @@ interface TilePos {
 }
 
 export class Ghost extends GhostRecord {
-  setStartPos(row: number, col: number) {
-    return this.set('col', col).set('row', row)
-  }
 
   draw(ctx: CanvasRenderingContext2D) {
     const { col, row, frameIndex, color } = this

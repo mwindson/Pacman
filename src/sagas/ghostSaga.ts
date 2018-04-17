@@ -18,22 +18,33 @@ function* wanderMode() {
     const { game: { ghosts, map } }: State = yield select()
     const newGhosts = ghosts.map(ghost => {
         const { dir, col, row } = ghost
-        const { vx, vy } = ghost.getSpeed()
         let newTargetTile = ghost.targetTile
         let newGhost = ghost
         if (!newTargetTile) {
-          // todo 需要初始化计算
-          newTargetTile = fromJS({ col, row: row - 1, dir: 'left' })
-          newGhost = ghost.set('targetTile', newTargetTile)
+          // todo 需要初始化计算目标贴图
+          const ds = [[-1, 0], [1, 0], [0, -1], [0, 1]]
+          const dirs = fromJS(['up', 'down', 'left', 'right'])
+          let targets = List([])
+          for (let i = 0; i < ds.length; i += 1) {
+            if (dirs.get(i) !== getOppsiteDirection(dir)) {
+              if (map.get(row + ds[i][0]).get(col + ds[i][1]) !== 'X') {
+                targets = targets.push(dirs.get(i))
+              }
+            }
+          }
+          newGhost = newGhost.set('targetTile', fromJS({ row, col, dir: targets.get(0) })).set('dir', targets.get(0))
         }
+        let targetTile = newGhost.targetTile
+        // 进入新的贴图,进行预测
+        if (Math.floor(col) === targetTile.get('col') && Math.floor(row) === targetTile.get('row')) {
+          newTargetTile = getNewTargetTile(map, targetTile.get('dir'), row, col)
+          newGhost = newGhost.set('targetTile', newTargetTile)
+          // 到达目标贴图，改变方向
+          newGhost = newGhost.set('dir', targetTile.get('dir'))
+        }
+        const { vx, vy } = newGhost.getSpeed()
         const nc = col + delta * vx
         const nr = row + delta * vy
-        const { targetTile } = newGhost
-        // 进入新的贴图
-        if (Math.floor(nc) === targetTile.get('col') && Math.floor(nr) === targetTile.get('row')) {
-          newTargetTile = getNewTargetTile(map, targetTile.get('dir'), nr, nc)
-          newGhost = ghost.set('dir', targetTile.get('dir')).set('targetTile', newTargetTile)
-        }
         return newGhost.set('col', nc).set('row', nr)
       }
     )
@@ -49,8 +60,8 @@ function* wanderMode() {
  * @param isFirst 是否为初始化targetTile
  * */
 function getNewTargetTile(map: List<List<string>>, dir: Direction, row: number, col: number, isFirst = false) {
-  let r = Math.round(row)
-  let c = Math.round(col)
+  let r = Math.floor(row)
+  let c = Math.floor(col)
   switch (dir) {
     case 'up':
       r = Math.floor(row) - 1
@@ -62,7 +73,7 @@ function getNewTargetTile(map: List<List<string>>, dir: Direction, row: number, 
       c = Math.floor(col) - 1
       break
     case 'right':
-      c = Math.ceil(row)
+      c = Math.ceil(col)
       break
   }
   const ds = [[-1, 0], [1, 0], [0, -1], [0, 1]]
@@ -78,7 +89,7 @@ function getNewTargetTile(map: List<List<string>>, dir: Direction, row: number, 
   return fromJS({
     col: c,
     row: r,
-    dir: targetDir.get(0)
+    dir: targetDir.get(Math.floor(Math.random() * targetDir.size))
   })
 }
 

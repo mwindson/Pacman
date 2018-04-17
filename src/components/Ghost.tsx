@@ -16,11 +16,14 @@ export default class Ghost extends React.Component<GhostProps, GhostState> {
     return (
       <g className="ghost">
         <rect width={TILE_SIZE} height={TILE_SIZE} x={x} y={y} fill="pink" />
-        {target ? <rect width={TILE_SIZE}
-                        height={TILE_SIZE}
-                        x={target.get('col') * TILE_SIZE}
-                        y={target.get('row') * TILE_SIZE}
-                        stroke="pink" /> : null}
+        {target ? <rect
+          width={TILE_SIZE}
+          height={TILE_SIZE}
+          x={target.get('col') * TILE_SIZE - TILE_SIZE / 2}
+          y={target.get('row') * TILE_SIZE - TILE_SIZE / 2}
+          stroke="pink"
+          fill={"rgba(0,0,0,0)"}
+        /> : null}
       </g>
     )
   }

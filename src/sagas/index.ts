@@ -1,10 +1,11 @@
-import { fork, put, select, take, takeEvery, takeLatest } from 'redux-saga/effects'
+import { fork, put, race, select, take } from 'redux-saga/effects'
 import { fromJS } from 'immutable'
 import { Action, KeyPressAction, TickAction, UpdatePacman, UpdatePacmanDirection } from 'utils/action'
 import tickerSaga from './tickerSaga'
 import { State } from '../reducers'
 import { getOppsiteDirection, isOnValidPath } from '../utils'
 import ghostSaga from './ghostSaga'
+import { delay } from 'redux-saga'
 
 
 export default function* rootSaga() {
@@ -35,7 +36,8 @@ function* playerController() {
 function* playerMove() {
   while (true) {
     const { delta }: TickAction = yield take('TICK')
-    const { dir: input }: KeyPressAction = yield take('KEY_PRESS')
+    let { input, d } = yield race({ input: take('KEY_PRESS'), delay: delay(0) })
+    // const { dir: input }: KeyPressAction = yield take('KEY_PRESS')
     const { game }: State = yield select()
     const { map, pacman } = game
     const { dir, col, row } = pacman

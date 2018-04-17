@@ -6,8 +6,8 @@ import GameScene from 'components/Gamescene'
 class App extends React.Component<{}, {}> {
 
   render() {
-    const width = SCREEN_WIDTH * TILE_SIZE
-    const height = SCREEN_HEIGHT * TILE_SIZE
+    const width = SCREEN_WIDTH * TILE_SIZE + TILE_SIZE
+    const height = SCREEN_HEIGHT * TILE_SIZE + TILE_SIZE
     return (
       <svg width={width} height={height}>
         <GameScene />

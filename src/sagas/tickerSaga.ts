@@ -14,7 +14,7 @@ export default function* tickerSaga(options: TickerOption = { FPS: 60 }) {
 
     function emitTick() {
       const now = performance.now()
-      emit({ type: 'TICK', delta: now - lastTime })
+      emit({ type: 'TICK', delta: (now - lastTime) / 1000 })
       lastTime = now
       requestId = requestAnimationFrame(emitTick)
     }
@@ -27,7 +27,7 @@ export default function* tickerSaga(options: TickerOption = { FPS: 60 }) {
     while (true) {
       const { delta }: TickAction = yield take(tickChannel)
       accTime += delta
-      if (accTime > 1000 / options.FPS) {
+      if (accTime > 1 / options.FPS) {
         yield put<TickAction>({ type: 'TICK', delta: accTime })
         accTime = 0
       }

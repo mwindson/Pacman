@@ -11,7 +11,6 @@ const GameRecord = Record(
     status: 'idle' as GameStatus,
     map: List<List<string>>(),
     pacman: new PacmanSprite(),
-    ghostData,
     ghosts: List(ghostData.map(d => new Ghost())),
     powerBeans: levelData.power_beans
   }
