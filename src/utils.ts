@@ -1,9 +1,8 @@
-import { LevelData } from 'game'
-import { TILE_WIDTH, TILE_HEIGHT } from 'constant'
-import { Direction } from 'types'
 import { List } from 'immutable'
-import { Ghost } from 'sprites/ghost'
-import { Pacman } from 'Sprite'
+import { TILE_HEIGHT, TILE_WIDTH } from './constant'
+import { Pacman } from './Sprite'
+import { Ghost } from './sprites/ghost'
+import { Direction } from './types'
 
 export function getOppsiteDirection(x: Direction) {
   switch (x) {

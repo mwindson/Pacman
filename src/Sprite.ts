@@ -1,7 +1,7 @@
 import { Record } from 'immutable'
-import { TILE_WIDTH, TILE_HEIGHT, PACMAN_SPEED } from 'constant'
-import { Direction } from 'types'
-import { coordinate2Pos } from 'utils'
+import { PACMAN_SPEED } from './constant'
+import { Direction } from './types'
+import { coordinate2Pos } from './utils'
 
 type State = 'idle' | 'moving' | 'dying'
 export type SpriteType = 'player' | 'enemy'
@@ -14,7 +14,7 @@ const PacmanRecord = Record({
   life: 3,
   remain: 0.2,
   isMoving: true,
-  frameIndex: 0
+  frameIndex: 0,
 })
 
 export class Pacman extends PacmanRecord {
