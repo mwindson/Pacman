@@ -1,30 +1,22 @@
-import { List } from 'immutable'
-import {
-  animationFrameScheduler,
-  EMPTY,
-  fromEvent,
-  interval,
-  merge,
-  Observable,
-  Subject,
-} from 'rxjs'
+import { animationFrameScheduler, EMPTY, fromEvent, interval, merge, Observable, Subject } from 'rxjs'
 import {
   distinctUntilChanged,
   filter,
   map,
   mapTo,
   pairwise,
+  sample,
   scan,
   share,
   shareReplay,
   startWith,
   switchMap,
+  tap,
   withLatestFrom,
 } from 'rxjs/operators'
 import { BEAN_SCORE, POWER_BEAN_SCORE } from './constant'
-import { Ghost } from './sprites/ghost'
-import Pacman from './sprites/Pacman'
-import { Direction, Game, LevelConfig, Reducer } from './types'
+import { LevelConfig } from './levels'
+import { Direction, Game, Pos, Reducer } from './types'
 import { calPathRouting, getOppsiteDirection, isOnValidPath } from './utils'
 
 const not = (a: boolean) => !a
@@ -57,8 +49,8 @@ const rawDelta$ = interval(0, animationFrameScheduler).pipe(
   map(([prev, cnt]) => (cnt - prev) / 1000),
 )
 
-export default function game(levelData: LevelConfig) {
-  const initGame = new Game(levelData)
+export default function game(levelConfig: LevelConfig) {
+  const initGame = new Game(levelConfig)
   const reducerProxy$ = new Subject<Reducer<Game>>()
 
   const game$ = reducerProxy$.pipe(
@@ -83,85 +75,81 @@ export default function game(levelData: LevelConfig) {
     withLatestFrom(lastDirection$, game$),
     map(([delta, input, { pacman, map }]) => {
       const { dir, col, row } = pacman
-      let nextPacman = pacman.set('dir', input)
-      const { vcol, vrow } = nextPacman.getSpeed()
+      pacman.dir = input
+      const { vcol, vrow } = pacman.getSpeed()
       const nextCol = col + delta * vcol
       const nextRow = row + delta * vrow
 
       if (isOnValidPath(map, nextCol, nextRow, input)) {
         if (dir === input || dir === getOppsiteDirection(input)) {
-          nextPacman = nextPacman.set('col', nextCol).set('row', nextRow)
+          pacman.col = nextCol
+          pacman.row = nextRow
         } else {
-          nextPacman = nextPacman.set('col', Math.round(nextCol)).set('row', Math.round(nextRow))
+          pacman.col = Math.round(nextCol)
+          pacman.row = Math.round(nextRow)
         }
         if (pacman.remain - delta < 0) {
-          nextPacman = nextPacman.set('frameIndex', 1 - pacman.frameIndex).set('remain', 0.2)
+          pacman.frameIndex = 1 - pacman.frameIndex
+          pacman.remain = 0.2
         } else {
-          nextPacman = nextPacman.set('remain', pacman.remain - delta)
+          pacman.remain -= delta
         }
       } else {
-        nextPacman = nextPacman.set('frameIndex', 0).set('remain', 0.2)
+        pacman.frameIndex = 0
+        pacman.remain = 0.2
       }
-      return nextPacman
+      return pacman
     }),
   )
 
-  // pacman eat bean
-  const eatBean$: Observable<[number, number]> = delta$.pipe(
-    withLatestFrom(game$),
-    map(([ticker, game]) => game),
+  const eatBean$ = game$.pipe(
+    sample(delta$),
     map(({ map, pacman }) => {
       const { col, row } = pacman
-      const c = Math.round(col)
-      const r = Math.round(row)
+      const beanRow = Math.round(row)
+      const beanCol = Math.round(col)
       if (Math.abs(Math.round(col) - col) < 0.2 && Math.abs(Math.round(row) - row) < 0.2) {
-        if (map.get(r).get(c) === '.') {
-          return [r, c] as [number, number]
+        if (map[beanRow][beanCol] === '.') {
+          return { row: beanRow, col: beanCol }
         }
       }
       return null
     }),
-    filter(Boolean),
+    filter<Pos>(Boolean),
     share(),
   )
 
-  // pacman eat powerbean
-  const eatPowerBean$: Observable<[number, number]> = delta$.pipe(
-    withLatestFrom(game$),
-    map(([ticker, game]) => game),
+  function isSamePos(a: Pos, b: Pos) {
+    return a.row === b.row && a.col === b.col
+  }
+
+  const eatPowerBean$ = game$.pipe(
+    sample(delta$),
     map(({ powerBeans, pacman }) => {
       const { col, row } = pacman
-      const c = Math.round(col)
-      const r = Math.round(row)
+      const beanCol = Math.round(col)
+      const beanRow = Math.round(row)
       if (Math.abs(Math.round(col) - col) < 0.2 && Math.abs(Math.round(row) - row) < 0.2) {
-        const a = powerBeans.find(pos => pos.get(0) === r && pos.get(1) === c)
-        if (powerBeans.find(pos => pos.get(0) === r && pos.get(1) === c)) {
-          return [r, c]
+        const beanPos = { row: beanRow, col: beanCol }
+        if (powerBeans.find(pos => isSamePos(pos, beanPos))) {
+          return beanPos
         }
       }
       return null
     }),
-    filter(Boolean),
+    filter<Pos>(Boolean),
     share(),
   )
 
-  // calculate new power beans list
   const nextPowerBeans$ = eatPowerBean$.pipe(
     withLatestFrom(game$),
-    map(([eatPowerBean, { powerBeans }]) =>
-      powerBeans.filterNot(pos => pos.get(0) === eatPowerBean[0] && pos.get(1) === eatPowerBean[1]),
-    ),
+    map(([beanPos, { powerBeans }]) => powerBeans.filter(pos => !isSamePos(pos, beanPos))),
   )
 
-  const nextMap$ = merge(
-    eatBean$.pipe(
-      withLatestFrom(game$),
-      map(([eatBean, { map }]) => map.setIn(eatBean, ' ')),
-    ),
-    eatPowerBean$.pipe(
-      withLatestFrom(game$),
-      map(([eatPowerBean, { map }]) => map.setIn(eatPowerBean, ' ')),
-    ),
+  const nextMap$ = eatBean$.pipe(
+    withLatestFrom(game$),
+    tap(([beanPos, { map }]) => (map[beanPos.row][beanPos.col] = ' ')), // TODO 不要原地修改
+    map(([beanPos, { map }]) => map),
   )
 
   const nextScore$ = merge(
@@ -207,16 +195,12 @@ export default function game(levelData: LevelConfig) {
   // )
 
   const reducer$: Observable<Reducer<Game>> = merge(
-    nextPacman$.pipe(
-      map<Game['pacman'], Reducer<Game>>(pacman => game => game.set('pacman', pacman)),
-    ),
-    nextMap$.pipe(map<Game['map'], Reducer<Game>>(map => game => game.set('map', map))),
+    nextPacman$.pipe(map<Game['pacman'], Reducer<Game>>(pacman => game => ((game.pacman = pacman), game))),
+    nextMap$.pipe(map<Game['map'], Reducer<Game>>(map => game => ((game.map = map), game))),
     nextPowerBeans$.pipe(
-      map<Game['powerBeans'], Reducer<Game>>(powerBeans => game =>
-        game.set('powerBeans', powerBeans),
-      ),
+      map<Game['powerBeans'], Reducer<Game>>(powerBeans => game => ((game.powerBeans = powerBeans), game)),
     ),
-    nextScore$.pipe(map<Game['score'], Reducer<Game>>(score => game => game.set('score', score))),
+    nextScore$.pipe(map<Game['score'], Reducer<Game>>(score => game => ((game.score = score), game))),
     // nextGhosts$.pipe(
     //   map<Game['ghosts'], Reducer<Game>>(ghosts => game => game.set('ghosts', ghosts)),
     // ),

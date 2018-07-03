@@ -1,10 +1,4 @@
-import { Pos } from './types'
-
-export interface LevelConfig {
-  map: string[][]
-  wallColor: string
-  powerBeans: Pos[]
-}
+import { LevelConfig } from './index'
 
 const levelConfig: LevelConfig = {
   map: [

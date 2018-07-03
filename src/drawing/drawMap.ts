@@ -1,13 +1,12 @@
-import { List } from 'immutable'
 import { coordinate2Pos } from '../utils'
 
-export default function drawMap(map: List<List<string>>, canvas: HTMLCanvasElement) {
+export default function drawMap(map: string[][], canvas: HTMLCanvasElement) {
   const ctx = canvas.getContext('2d')
   ctx.lineWidth = 2
-  const get = (i: number, j: number) =>
-    i < 0 || j < 0 || i >= map.size || j >= map.get(0).size ? 'X' : map.get(i).get(j)
-  for (let i = 0; i < map.size; i += 1) {
-    for (let j = 0; j < map.get(0).size; j += 1) {
+  const get = (i: number, j: number) => (i < 0 || j < 0 || i >= map.length || j >= map[0].length ? 'X' : map[i][j])
+
+  for (let i = 0; i < map.length; i += 1) {
+    for (let j = 0; j < map[0].length; j += 1) {
       const value = get(i, j)
       const pos = coordinate2Pos(i, j)
       const { x, y } = pos
@@ -16,45 +15,25 @@ export default function drawMap(map: List<List<string>>, canvas: HTMLCanvasEleme
         const code = [0, 0, 0, 0]
         if (
           get(i + 1, j) === 'X' &&
-          !(
-            get(i + 1, j - 1) === 'X' &&
-            get(i + 1, j + 1) === 'X' &&
-            get(i, j - 1) === 'X' &&
-            get(i, j + 1) === 'X'
-          )
+          !(get(i + 1, j - 1) === 'X' && get(i + 1, j + 1) === 'X' && get(i, j - 1) === 'X' && get(i, j + 1) === 'X')
         ) {
           code[0] = 1
         }
         if (
           get(i, j + 1) === 'X' &&
-          !(
-            get(i - 1, j + 1) === 'X' &&
-            get(i + 1, j + 1) === 'X' &&
-            get(i - 1, j) === 'X' &&
-            get(i + 1, j) === 'X'
-          )
+          !(get(i - 1, j + 1) === 'X' && get(i + 1, j + 1) === 'X' && get(i - 1, j) === 'X' && get(i + 1, j) === 'X')
         ) {
           code[1] = 1
         }
         if (
           get(i - 1, j) === 'X' &&
-          !(
-            get(i - 1, j - 1) === 'X' &&
-            get(i - 1, j + 1) === 'X' &&
-            get(i, j - 1) === 'X' &&
-            get(i, j + 1) === 'X'
-          )
+          !(get(i - 1, j - 1) === 'X' && get(i - 1, j + 1) === 'X' && get(i, j - 1) === 'X' && get(i, j + 1) === 'X')
         ) {
           code[2] = 1
         }
         if (
           get(i, j - 1) === 'X' &&
-          !(
-            get(i - 1, j - 1) === 'X' &&
-            get(i + 1, j - 1) === 'X' &&
-            get(i - 1, j) === 'X' &&
-            get(i + 1, j) === 'X'
-          )
+          !(get(i - 1, j - 1) === 'X' && get(i + 1, j - 1) === 'X' && get(i - 1, j) === 'X' && get(i + 1, j) === 'X')
         ) {
           code[3] = 1
         }

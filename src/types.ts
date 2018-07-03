@@ -1,5 +1,5 @@
-import { LevelConfig } from './level'
-import { Ghost } from './sprites/ghost'
+import { LevelConfig } from './levels'
+import Ghost from './sprites/Ghost'
 import Pacman from './sprites/Pacman'
 
 export type Direction = 'left' | 'right' | 'up' | 'down' | 'idle'

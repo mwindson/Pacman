@@ -22,11 +22,10 @@
     "webpack-dev-server": "^3.1.4"
   },
   "dependencies": {
-    "immutable": "v4.0.0-rc.9",
     "rxjs": "6"
   },
   "prettier": {
-    "printWidth": 100,
+    "printWidth": 120,
     "semi": false,
     "singleQuote": true,
     "trailingComma": "all"

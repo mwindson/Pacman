@@ -1,8 +1,7 @@
-import { List } from 'immutable'
 import { TILE_HEIGHT, TILE_WIDTH } from './constant'
-import { Pacman } from './sprites/Pacman'
-import { Ghost } from './sprites/ghost'
-import { Direction } from './types'
+import Ghost from './sprites/Ghost'
+import Pacman from './sprites/Pacman'
+import { Direction, Pos } from './types'
 
 export function getOppsiteDirection(x: Direction) {
   switch (x) {
@@ -34,11 +33,11 @@ export function coordinate2Pos(i: number, j: number) {
   return { x: (j + 0.5) * TILE_WIDTH, y: (i + 2.5) * TILE_HEIGHT }
 }
 
-export function isOnValidPath(map: List<List<string>>, x: number, y: number, dir: Direction) {
+export function isOnValidPath(map: string[][], x: number, y: number, dir: Direction) {
   const { row, col } = findNearestTile(x, y, dir)
   const block = ['X']
   // 左右移动时，判断
-  if (block.find(v => v === map.get(row).get(col))) {
+  if (block.find(v => v === map[row][col])) {
     return false
   }
   return true
@@ -69,18 +68,13 @@ export function round(x: number, n = 2) {
   return Math.round(x * Math.pow(10, n)) / Math.pow(10, n)
 }
 
-export interface TilePos {
-  col: number
-  row: number
-}
-export function calPathRouting(ghost: Ghost, pacman: Pacman, map: List<List<string>>) {
+export function calPathRouting(ghost: Ghost, pacman: Pacman, map: string[][]) {
   const { row, col, dir } = ghost
   const startPos = findNearestTile(col, row, dir)
-  let nextDir = dir
   const endPos = findNearestTile(pacman.col, pacman.row, pacman.dir)
-  const queue = [] as { point: TilePos; path: TilePos[] }[]
+  const queue: Array<{ point: Pos; path: Pos[] }> = []
   queue.push({ point: startPos, path: [] })
-  let shortestPath: TilePos[] = []
+  let shortestPath: Pos[] = []
   while (queue.length > 0) {
     const { point, path } = queue.shift()
     if (point.col === endPos.col && point.row === endPos.row) {
@@ -88,25 +82,28 @@ export function calPathRouting(ghost: Ghost, pacman: Pacman, map: List<List<stri
       break
     }
     const surround = [[-1, 0], [1, 0], [0, 1], [0, -1]]
-    for (let sur of surround) {
+    for (const sur of surround) {
       const nextPoint = { col: point.col + sur[0], row: point.row + sur[1] }
       if (!path.find(({ col, row }) => col === nextPoint.col && row === nextPoint.row)) {
-        if (map.get(nextPoint.row).get(nextPoint.col) !== 'X') {
+        if (map[nextPoint.row][nextPoint.col] !== 'X') {
           queue.push({ point: nextPoint, path: path.concat([point]) })
         }
       }
     }
   }
-  let path: List<TilePos> = List()
-  path = path.push(shortestPath[0])
+
+  const path: Pos[] = []
+  path.push(shortestPath[0])
+
   for (let i = 1; i < shortestPath.length - 1; i += 1) {
     const { row: pr, col: pc } = shortestPath[i - 1]
     const { row: r, col: c } = shortestPath[i]
     const { row: nr, col: nc } = shortestPath[i + 1]
     if ((pr + nr) / 2 !== r || (pc + nc) / 2 !== r) {
-      path = path.push(shortestPath[i])
+      path.push(shortestPath[i])
     }
   }
-  path = path.push(shortestPath[shortestPath.length - 1])
+  path.push(shortestPath[shortestPath.length - 1])
+
   return { path, index: 0 }
 }
