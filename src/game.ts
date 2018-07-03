@@ -1,119 +1,103 @@
 import { List } from 'immutable'
-import { animationFrameScheduler, fromEvent, interval, merge, Observable, Subject } from 'rxjs'
+import {
+  animationFrameScheduler,
+  EMPTY,
+  fromEvent,
+  interval,
+  merge,
+  Observable,
+  Subject,
+} from 'rxjs'
 import {
   distinctUntilChanged,
   filter,
   map,
   mapTo,
+  pairwise,
   scan,
   share,
   shareReplay,
   startWith,
-  tap,
+  switchMap,
   withLatestFrom,
 } from 'rxjs/operators'
-import Action, {
-  UpdateGhosts,
-  UpdateMap,
-  UpdatePacman,
-  UpdatePowerBeans,
-  UpdateScore,
-} from './Action'
-import { BEAN_SCORE, POWER_BEAN_SCORE, TICKER_INTERVAL } from './constant'
-import draw from './drawing/draw'
-import { Pacman } from './Sprite'
+import { BEAN_SCORE, POWER_BEAN_SCORE } from './constant'
 import { Ghost } from './sprites/ghost'
-import { Direction, Game, LevelConfig } from './types'
+import Pacman from './sprites/Pacman'
+import { Direction, Game, LevelConfig, Reducer } from './types'
 import { calPathRouting, getOppsiteDirection, isOnValidPath } from './utils'
 
-function initGameFn(levelConfig: LevelConfig) {
-  const pacman = new Pacman()
-  const ghostData = [{ color: 'pink', pos: { x: 0, y: 0 } }]
-  const ghosts = List(ghostData.map(d => new Ghost()))
+const not = (a: boolean) => !a
 
-  return new Game({
-    map: List(levelConfig.map).map(s => List(s)),
-    pacman,
-    powerBeans: List(levelConfig.power_beans).map(pos => List(pos)),
-    ghosts,
-    score: 0,
-  })
-}
+// 玩家最后按下的方向
+const lastDirection$ = fromEvent<KeyboardEvent>(document, 'keydown').pipe(
+  map<KeyboardEvent, Direction>(e => {
+    if (e.key === 'w') {
+      return 'up'
+    } else if (e.key === 'a') {
+      return 'left'
+    } else if (e.key === 's') {
+      return 'down'
+    } else if (e.key === 'd') {
+      return 'right'
+    } else {
+      return null
+    }
+  }),
+  filter(Boolean),
+  distinctUntilChanged(),
+  startWith<Direction>('idle'),
+  shareReplay(1),
+)
 
-export default function game(levelData: LevelConfig, canvas: HTMLCanvasElement) {
-  const initGame = initGameFn(levelData)
-  const actionProxy$ = new Subject<Action>()
+const rawDelta$ = interval(0, animationFrameScheduler).pipe(
+  startWith(performance.now()),
+  map(() => performance.now()),
+  pairwise(),
+  map(([prev, cnt]) => (cnt - prev) / 1000),
+)
 
-  const game$ = actionProxy$.pipe(
-    scan<Action, Game>((game, action) => {
-      if (action.type === 'update-map') {
-        return game.set('map', action.map)
-      }
-      if (action.type === 'update-pacman') {
-        return game.set('pacman', action.pacman)
-      }
-      if (action.type === 'update-power-beans') {
-        return game.set('powerBeans', action.powerBeans)
-      }
-      if (action.type === 'update-score') {
-        return game.set('score', action.score)
-      }
-      if (action.type === 'update-ghosts') {
-        return game.set('ghosts', action.ghosts)
-      }
-      return game
-    }, initGame),
+export default function game(levelData: LevelConfig) {
+  const initGame = new Game(levelData)
+  const reducerProxy$ = new Subject<Reducer<Game>>()
+
+  const game$ = reducerProxy$.pipe(
+    scan<Reducer<Game>, Game>((game, reducer) => reducer(game), initGame),
     startWith(initGame),
     shareReplay(1),
   )
 
-  const ticker$ = interval(0, animationFrameScheduler).pipe(
-    map(() => ({ time: performance.now(), deltaTime: null as number })),
-    scan((previous, current) => ({
-      time: current.time,
-      deltaTime: (current.time - previous.time) / 1000,
-    })),
-  )
-
-  const input$ = fromEvent<KeyboardEvent>(document, 'keydown').pipe(
-    map<KeyboardEvent, Direction>(e => {
-      if (e.key === 'w') {
-        return 'up'
-      } else if (e.key === 'a') {
-        return 'left'
-      } else if (e.key === 's') {
-        return 'down'
-      } else if (e.key === 'd') {
-        return 'right'
-      } else {
-        return null
-      }
-    }),
-    filter(Boolean),
-    distinctUntilChanged(),
-    startWith<Direction>('idle'),
+  const paused$ = fromEvent<KeyboardEvent>(document, 'keydown').pipe(
+    filter(e => e.key === 'Escape'),
+    scan<KeyboardEvent, boolean>(not, false),
+    startWith(false),
     shareReplay(1),
-    tap(console.log),
   )
 
-  const nextPacmanPos$ = ticker$.pipe(
-    withLatestFrom(input$, game$),
-    map(([{ deltaTime }, input, { pacman, map }]) => {
+  const delta$ = paused$.pipe(
+    switchMap(paused => (paused ? EMPTY : rawDelta$)),
+    share(),
+  )
+
+  const nextPacman$ = delta$.pipe(
+    withLatestFrom(lastDirection$, game$),
+    map(([delta, input, { pacman, map }]) => {
       const { dir, col, row } = pacman
       let nextPacman = pacman.set('dir', input)
-      const { vx, vy } = nextPacman.getSpeed()
-      const nc = col + deltaTime * vx
-      const nr = row + deltaTime * vy
-      if (isOnValidPath(map, nc, nr, input)) {
+      const { vcol, vrow } = nextPacman.getSpeed()
+      const nextCol = col + delta * vcol
+      const nextRow = row + delta * vrow
+
+      if (isOnValidPath(map, nextCol, nextRow, input)) {
         if (dir === input || dir === getOppsiteDirection(input)) {
-          nextPacman = nextPacman.set('col', nc).set('row', nr)
+          nextPacman = nextPacman.set('col', nextCol).set('row', nextRow)
         } else {
-          nextPacman = nextPacman.set('col', Math.round(nc)).set('row', Math.round(nr))
+          nextPacman = nextPacman.set('col', Math.round(nextCol)).set('row', Math.round(nextRow))
         }
-        if (pacman.remain - deltaTime < 0) {
+        if (pacman.remain - delta < 0) {
           nextPacman = nextPacman.set('frameIndex', 1 - pacman.frameIndex).set('remain', 0.2)
         } else {
-          nextPacman = nextPacman.set('remain', pacman.remain - deltaTime)
+          nextPacman = nextPacman.set('remain', pacman.remain - delta)
         }
       } else {
         nextPacman = nextPacman.set('frameIndex', 0).set('remain', 0.2)
@@ -123,7 +107,7 @@ export default function game(levelData: LevelConfig, canvas: HTMLCanvasElement) 
   )
 
   // pacman eat bean
-  const eatBean$: Observable<[number, number]> = ticker$.pipe(
+  const eatBean$: Observable<[number, number]> = delta$.pipe(
     withLatestFrom(game$),
     map(([ticker, game]) => game),
     map(({ map, pacman }) => {
@@ -142,7 +126,7 @@ export default function game(levelData: LevelConfig, canvas: HTMLCanvasElement) 
   )
 
   // pacman eat powerbean
-  const eatPowerBean$: Observable<[number, number]> = ticker$.pipe(
+  const eatPowerBean$: Observable<[number, number]> = delta$.pipe(
     withLatestFrom(game$),
     map(([ticker, game]) => game),
     map(({ powerBeans, pacman }) => {
@@ -170,7 +154,10 @@ export default function game(levelData: LevelConfig, canvas: HTMLCanvasElement) 
   )
 
   const nextMap$ = merge(
-    eatBean$.pipe(withLatestFrom(game$), map(([eatBean, { map }]) => map.setIn(eatBean, ' '))),
+    eatBean$.pipe(
+      withLatestFrom(game$),
+      map(([eatBean, { map }]) => map.setIn(eatBean, ' ')),
+    ),
     eatPowerBean$.pipe(
       withLatestFrom(game$),
       map(([eatPowerBean, { map }]) => map.setIn(eatPowerBean, ' ')),
@@ -178,7 +165,10 @@ export default function game(levelData: LevelConfig, canvas: HTMLCanvasElement) 
   )
 
   const nextScore$ = merge(
-    eatBean$.pipe(withLatestFrom(game$), map(([eatBean, { score }]) => score + BEAN_SCORE)),
+    eatBean$.pipe(
+      withLatestFrom(game$),
+      map(([eatBean, { score }]) => score + BEAN_SCORE),
+    ),
     eatPowerBean$.pipe(
       withLatestFrom(game$),
       map(([eatPowerBean, { score }]) => score + POWER_BEAN_SCORE),
@@ -194,58 +184,45 @@ export default function game(levelData: LevelConfig, canvas: HTMLCanvasElement) 
     withLatestFrom(game$),
     map(([n, { ghosts, pacman, map }]) => ghosts.map(g => calPathRouting(g, pacman, map))),
   )
-  const nextGhosts$ = ticker$.pipe(
-    withLatestFrom(game$),
-    map(([{ deltaTime }, { pacman, ghosts, map }]) =>
-      ghosts.map(ghost => ghost.move(pacman, deltaTime, map, canvas)),
-    ),
-  )
+
+  // const nextGhosts$ = delta$.pipe(
+  //   withLatestFrom(game$),
+  // map(([delta, { pacman, ghosts, map }]) => ghosts.map(ghost => ghost.move(pacman, delta, map))),
+  // )
 
   // pacman collide with ghost
-  const collideWithGhost$ = ticker$.pipe(
-    withLatestFrom(nextGhosts$, nextPacmanPos$),
-    map(([ticker, ghosts, pacman]) => {
-      let collided = false
-      ghosts.forEach(g => {
-        const dist = Math.pow(g.col - pacman.col, 2) + Math.pow(g.row - pacman.row, 2)
-        if (dist < 10) {
-          collided = true
-        }
-      })
-      return collided
-    }),
-    filter(Boolean),
-  )
+  // const collideWithGhost$ = delta$.pipe(
+  //   withLatestFrom(nextGhosts$, nextPacman$),
+  //   map(([ticker, ghosts, pacman]) => {
+  //     let collided = false
+  //     ghosts.forEach(g => {
+  //       const dist = Math.pow(g.col - pacman.col, 2) + Math.pow(g.row - pacman.row, 2)
+  //       if (dist < 10) {
+  //         collided = true
+  //       }
+  //     })
+  //     return collided
+  //   }),
+  //   filter(Boolean),
+  // )
 
-  const nextPacman$ = merge(
-    eatPowerBean$.pipe(
-      withLatestFrom(nextPacmanPos$),
-      map(([eatPowerBean, nextPacmanPos]) => {
-        console.log('eat power bean')
-        return nextPacmanPos
-      }),
+  const reducer$: Observable<Reducer<Game>> = merge(
+    nextPacman$.pipe(
+      map<Game['pacman'], Reducer<Game>>(pacman => game => game.set('pacman', pacman)),
     ),
-    nextPacmanPos$,
-    collideWithGhost$.pipe(
-      withLatestFrom(game$),
-      map(([x, { pacman }]) => {
-        console.log('pacman collide with ghost')
-        return pacman
-      }),
-    ),
-  )
-
-  // 发出下一次更新的actions
-  const action$: Observable<Action> = merge(
-    nextPacman$.pipe(map(pacman => ({ type: 'update-pacman', pacman } as UpdatePacman))),
-    nextMap$.pipe(map(map => ({ type: 'update-map', map } as UpdateMap))),
+    nextMap$.pipe(map<Game['map'], Reducer<Game>>(map => game => game.set('map', map))),
     nextPowerBeans$.pipe(
-      map(powerBeans => ({ type: 'update-power-beans', powerBeans } as UpdatePowerBeans)),
+      map<Game['powerBeans'], Reducer<Game>>(powerBeans => game =>
+        game.set('powerBeans', powerBeans),
+      ),
     ),
-    nextScore$.pipe(map(score => ({ type: 'update-score', score } as UpdateScore))),
-    nextGhosts$.pipe(map(ghosts => ({ type: 'update-ghosts', ghosts } as UpdateGhosts))),
+    nextScore$.pipe(map<Game['score'], Reducer<Game>>(score => game => game.set('score', score))),
+    // nextGhosts$.pipe(
+    //   map<Game['ghosts'], Reducer<Game>>(ghosts => game => game.set('ghosts', ghosts)),
+    // ),
   )
 
-  game$.subscribe(game => draw(game, canvas))
-  action$.subscribe(actionProxy$)
+  reducer$.subscribe(reducerProxy$)
+
+  return game$
 }

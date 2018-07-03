@@ -1,37 +1,32 @@
-import { Record } from 'immutable'
-import { PACMAN_SPEED } from './constant'
-import { Direction } from './types'
-import { coordinate2Pos } from './utils'
+import { PACMAN_SPEED } from '../constant'
+import { Direction } from '../types'
+import { coordinate2Pos } from '../utils'
 
-type State = 'idle' | 'moving' | 'dying'
-export type SpriteType = 'player' | 'enemy'
-const PacmanRecord = Record({
-  type: 'player' as SpriteType,
-  state: 'idle',
-  col: 13,
-  row: 17,
-  dir: 'idle' as Direction,
-  life: 3,
-  remain: 0.2,
-  isMoving: true,
-  frameIndex: 0,
-})
+export default class Pacman {
+  col = 13
+  row = 17
+  dir: Direction = 'idle'
+  life = 3
+  remain = 0.2
+  isMoving = true
+  frameIndex = 0
 
-export class Pacman extends PacmanRecord {
   getSpeed() {
     // TODO 根据type和state来返回玩家和敌人的速度
-    let vx = 0
-    let vy = 0
+    let vcol = 0
+    let vrow = 0
     if (this.dir === 'left' || this.dir === 'right') {
-      vx = this.dir === 'left' ? -PACMAN_SPEED : PACMAN_SPEED
+      vcol = this.dir === 'left' ? -PACMAN_SPEED : PACMAN_SPEED
     } else if (this.dir === 'up' || this.dir === 'down') {
-      vy = this.dir === 'up' ? -PACMAN_SPEED : PACMAN_SPEED
+      vrow = this.dir === 'up' ? -PACMAN_SPEED : PACMAN_SPEED
     }
-    return { vx, vy }
+    return { vcol, vrow }
   }
+
   draw(ctx: CanvasRenderingContext2D) {
     const { col, row, frameIndex, dir } = this
     const { x, y } = coordinate2Pos(row, col)
+
     ctx.fillStyle = 'yellow'
     ctx.beginPath()
     if (frameIndex === 0) {

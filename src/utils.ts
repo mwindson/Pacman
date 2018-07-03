@@ -1,6 +1,6 @@
 import { List } from 'immutable'
 import { TILE_HEIGHT, TILE_WIDTH } from './constant'
-import { Pacman } from './Sprite'
+import { Pacman } from './sprites/Pacman'
 import { Ghost } from './sprites/ghost'
 import { Direction } from './types'
 
@@ -18,19 +18,22 @@ export function getOppsiteDirection(x: Direction) {
       return 'idle'
   }
 }
-export function getNextPos(s: Ghost | Pacman, deltaTime: number) {
+
+export function getNextPos(s: Ghost | Pacman, delta: number) {
   const { row, col } = s
-  const { vx, vy } = s.getSpeed()
-  const nc = col + deltaTime * vx
-  const nr = row + deltaTime * vy
-  return { nr, nc }
+  const { vcol, vrow } = s.getSpeed()
+  const nextCol = col + delta * vcol
+  const nextRow = row + delta * vrow
+  return { nextRow, nextCol }
 }
+
 export function pos2Coordinate(x: number, y: number) {
   return { x: round(x / TILE_WIDTH - 0.5), y: round(y / TILE_HEIGHT - 2.5) }
 }
 export function coordinate2Pos(i: number, j: number) {
   return { x: (j + 0.5) * TILE_WIDTH, y: (i + 2.5) * TILE_HEIGHT }
 }
+
 export function isOnValidPath(map: List<List<string>>, x: number, y: number, dir: Direction) {
   const { row, col } = findNearestTile(x, y, dir)
   const block = ['X']
