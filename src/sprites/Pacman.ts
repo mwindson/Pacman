@@ -1,32 +1,33 @@
-import { PACMAN_SPEED } from '../constant'
-import { Direction } from '../types'
-import { coordinate2Pos } from '../utils'
+import { Record } from 'immutable'
+import { PACMAN_SPEED, TILE_SIZE } from '../constant'
+import { Direction, Speed } from '../types'
 
-export default class Pacman {
-  col = 13
-  row = 17
-  dir: Direction = 'idle'
-  life = 3
-  remain = 0.2
-  isMoving = true
-  frameIndex = 0
-
-  getSpeed() {
-    // TODO 根据type和state来返回玩家和敌人的速度
-    let vcol = 0
-    let vrow = 0
-    if (this.dir === 'left' || this.dir === 'right') {
-      vcol = this.dir === 'left' ? -PACMAN_SPEED : PACMAN_SPEED
-    } else if (this.dir === 'up' || this.dir === 'down') {
-      vrow = this.dir === 'up' ? -PACMAN_SPEED : PACMAN_SPEED
+export default class Pacman extends Record({
+  x: 13 * TILE_SIZE,
+  y: 17 * TILE_SIZE,
+  dir: 'idle' as Direction,
+  life: 3,
+  isMoving: false,
+  movedDistance: 0,
+}) {
+  getSpeed(): Speed {
+    if (this.dir === 'left') {
+      return { vx: -PACMAN_SPEED, vy: 0 }
+    } else if (this.dir === 'right') {
+      return { vx: +PACMAN_SPEED, vy: 0 }
+    } else if (this.dir === 'up') {
+      return { vx: 0, vy: -PACMAN_SPEED }
+    } else if (this.dir === 'down') {
+      return { vx: 0, vy: +PACMAN_SPEED }
+    } else {
+      return { vx: 0, vy: 0 }
     }
-    return { vcol, vrow }
   }
 
   draw(ctx: CanvasRenderingContext2D) {
-    const { col, row, frameIndex, dir } = this
-    const { x, y } = coordinate2Pos(row, col)
-
+    const { x, y, dir, movedDistance, isMoving } = this
+    const frameIndex = isMoving ? (movedDistance % 30 < 15 ? 1 : 0) : 0
+    ctx.save()
     ctx.fillStyle = 'yellow'
     ctx.beginPath()
     if (frameIndex === 0) {
@@ -53,5 +54,6 @@ export default class Pacman {
     ctx.lineTo(x, y)
     ctx.fill()
     ctx.closePath()
+    ctx.restore()
   }
 }

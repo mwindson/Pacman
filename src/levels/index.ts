@@ -1,7 +1,6 @@
-import { Pos } from '../types'
-
 export interface LevelConfig {
-  map: string[][]
+  M: number
+  N: number
+  map: string[]
   wallColor: string
-  powerBeans: Pos[]
 }

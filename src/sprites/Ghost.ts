@@ -1,6 +1,5 @@
-import { GHOST_SPEED } from '../constant'
-import { Direction, SpriteType } from '../types'
-import { coordinate2Pos } from '../utils'
+import { GHOST_SPEED, PACMAN_SPEED } from '../constant'
+import { Direction, Speed, SpriteType } from '../types'
 
 export default class Ghost {
   type = 'enemy' as SpriteType
@@ -19,40 +18,41 @@ export default class Ghost {
   width = 30
   height = 30
 
-  draw(ctx: CanvasRenderingContext2D) {
-    const { col, row, frameIndex, color } = this
-    const { x, y } = coordinate2Pos(row, col)
-    ctx.fillStyle = color
-    ctx.fillStyle = this.color
-    ctx.beginPath()
-    ctx.arc(x, y, this.width * 0.5, 0, Math.PI, true)
-    switch (this.frameIndex) {
-      case 0:
-        ctx.lineTo(x - this.width * 0.5, y + this.height * 0.4)
-        ctx.quadraticCurveTo(x - this.width * 0.4, y + this.height * 0.5, x - this.width * 0.2, y + this.height * 0.3)
-        ctx.quadraticCurveTo(x, y + this.height * 0.5, x + this.width * 0.2, y + this.height * 0.3)
-        ctx.quadraticCurveTo(x + this.width * 0.4, y + this.height * 0.5, x + this.width * 0.5, y + this.height * 0.4)
-        break
-      case 1:
-        ctx.lineTo(x - this.width * 0.5, y + this.height * 0.3)
-        ctx.quadraticCurveTo(x - this.width * 0.25, y + this.height * 0.5, x, y + this.height * 0.3)
-        ctx.quadraticCurveTo(x + this.width * 0.25, y + this.height * 0.5, x + this.width * 0.5, y + this.height * 0.3)
-        break
-    }
-    ctx.fill()
-    ctx.closePath()
-  }
+  // draw(ctx: CanvasRenderingContext2D) {
+  //   const { col, row, frameIndex, color } = this
+  //   const { x, y } = coordinate2Pos(row, col)
+  //   ctx.fillStyle = color
+  //   ctx.fillStyle = this.color
+  //   ctx.beginPath()
+  //   ctx.arc(x, y, this.width * 0.5, 0, Math.PI, true)
+  //   switch (this.frameIndex) {
+  //     case 0:
+  //       ctx.lineTo(x - this.width * 0.5, y + this.height * 0.4)
+  //       ctx.quadraticCurveTo(x - this.width * 0.4, y + this.height * 0.5, x - this.width * 0.2, y + this.height * 0.3)
+  //       ctx.quadraticCurveTo(x, y + this.height * 0.5, x + this.width * 0.2, y + this.height * 0.3)
+  //       ctx.quadraticCurveTo(x + this.width * 0.4, y + this.height * 0.5, x + this.width * 0.5, y + this.height * 0.4)
+  //       break
+  //     case 1:
+  //       ctx.lineTo(x - this.width * 0.5, y + this.height * 0.3)
+  //       ctx.quadraticCurveTo(x - this.width * 0.25, y + this.height * 0.5, x, y + this.height * 0.3)
+  //       ctx.quadraticCurveTo(x + this.width * 0.25, y + this.height * 0.5, x + this.width * 0.5, y + this.height * 0.3)
+  //       break
+  //   }
+  //   ctx.fill()
+  //   ctx.closePath()
+  // }
 
-  getSpeed() {
-    // TODO 根据type和state来返回玩家和敌人的速度
-    let vcol = 0
-    let vrow = 0
-    if (this.dir === 'left' || this.dir === 'right') {
-      vcol = this.dir === 'left' ? -GHOST_SPEED : GHOST_SPEED
-    } else if (this.dir === 'up' || this.dir === 'down') {
-      vrow = this.dir === 'up' ? -GHOST_SPEED : GHOST_SPEED
+  // TODO 根据type和state来返回玩家和敌人的速度
+  getSpeed(): Speed {
+    if (this.dir === 'left') {
+      return { vx: -PACMAN_SPEED, vy: 0 }
+    } else if (this.dir === 'right') {
+      return { vx: +PACMAN_SPEED, vy: 0 }
+    } else if (this.dir === 'up') {
+      return { vx: 0, vy: -PACMAN_SPEED }
+    } else {
+      return { vx: 0, vy: +PACMAN_SPEED }
     }
-    return { vcol, vrow }
   }
 
   // beFearing(pacmanEatPowerBean: Boolean) {

@@ -3,7 +3,8 @@ import game from './game'
 import level1 from './levels/level1'
 
 const canvas = document.getElementById('screen') as HTMLCanvasElement
+const ctx = canvas.getContext('2d')
 
-const gameState$ = game(level1)
+const sink = game(level1)
 
-gameState$.subscribe(game => draw(game, canvas))
+sink.subscribe(game => draw(ctx, game, level1))

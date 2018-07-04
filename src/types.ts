@@ -1,31 +1,35 @@
-import { LevelConfig } from './levels'
-import Ghost from './sprites/Ghost'
+import { List } from 'immutable'
 import Pacman from './sprites/Pacman'
 
 export type Direction = 'left' | 'right' | 'up' | 'down' | 'idle'
 export type SpriteType = 'player' | 'enemy'
+
+export interface Point {
+  x: number
+  y: number
+}
 
 export interface Pos {
   row: number
   col: number
 }
 
-export type Reducer<T> = (t: T) => T
+export interface Speed {
+  vx: number
+  vy: number
+}
 
-type char = string
+export enum MapItem {
+  bean,
+  powerBean,
+  empty,
+  obstacle,
+  door,
+}
 
-export class Game {
-  map: char[][]
+export interface Sink {
   pacman: Pacman
-  ghosts: Ghost[]
-  powerBeans: Pos[]
   score: number
-
-  constructor(readonly levelConfig: LevelConfig) {
-    this.map = levelConfig.map.map(s => Array.from(s))
-    this.pacman = new Pacman()
-    this.ghosts = [new Ghost()]
-    this.powerBeans = levelConfig.powerBeans // TODO need a shallow-copy
-    this.score = 0
-  }
+  mapItems: List<MapItem>
+  paused: boolean
 }
