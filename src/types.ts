@@ -1,8 +1,8 @@
 import { List } from 'immutable'
+import Ghost from './sprites/Ghost'
 import Pacman from './sprites/Pacman'
 
 export type Direction = 'left' | 'right' | 'up' | 'down' | 'idle'
-export type SpriteType = 'player' | 'enemy'
 
 export interface Point {
   x: number
@@ -32,4 +32,14 @@ export interface Sink {
   score: number
   mapItems: List<MapItem>
   paused: boolean
+  powerBeanCountdown: number
+  ghosts: List<Ghost>
+}
+
+export interface ControlConfig {
+  left: string
+  right: string
+  up: string
+  down: string
+  pause: string
 }

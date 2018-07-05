@@ -1,7 +1,7 @@
-import { is, List, OrderedSet, Range } from 'immutable'
-import { animationFrameScheduler, combineLatest, EMPTY, fromEvent, interval, merge, Observable, Subject } from 'rxjs'
+import { List } from 'immutable'
+import { combineLatest, merge, Observable, Subject } from 'rxjs'
 import {
-  distinctUntilChanged,
+  endWith,
   filter,
   map,
   mapTo,
@@ -11,99 +11,27 @@ import {
   share,
   shareReplay,
   startWith,
-  switchMap,
+  switchMapTo,
+  takeWhile,
   withLatestFrom,
 } from 'rxjs/operators'
-import { BEAN_SCORE, POWER_BEAN_SCORE, TILE_SIZE } from './constant'
+import { BEAN_SCORE, CONTROL_CONFIG, POWER_BEAN_EFFECT_TIMEOUT, POWER_BEAN_SCORE, TILE_SIZE } from './constant'
 import { LevelConfig } from './levels'
+import Ghost from './sprites/Ghost'
 import Pacman from './sprites/Pacman'
-import { Direction, MapItem, Point, Pos, Sink } from './types'
+import { MapItem, Point, Pos, Sink } from './types'
+import getDesiredDir from './utils/getDesiredDir'
+import getInitMapItems from './utils/getInitConfig'
+import { getDeltaFromPaused, getPaused } from './utils/paused-and-delta'
 import { isOppositeDir } from './utils/pos-utils'
-import { mapKeyboardEventToDirection } from './utils/utils'
-
-const not = (a: boolean) => !a
-const add = (a: number) => (b: number) => a + b
-
-// x 处于 TILE_SIZE 的小数部分是否处于 [min, max] 之间
-const between = (x: number, min: number, max: number, debug = false) => {
-  if (debug) {
-    debugger
-  }
-  const mod = (x % TILE_SIZE) / TILE_SIZE
-  return (min <= mod && mod <= max) || (min - 1 <= mod && mod <= max - 1) || (min + 1 <= mod && mod <= max + 1)
-}
-
-const sharedKeydown$ = fromEvent<KeyboardEvent>(document, 'keydown').pipe(share())
-const sharedKeyup$ = fromEvent<KeyboardEvent>(document, 'keyup').pipe(share())
-
-type UpDown = { type: 'down' | 'up'; dir: Direction }
-
-const desiredDir$ = merge(
-  sharedKeydown$.pipe(
-    mapKeyboardEventToDirection,
-    map<Direction, UpDown>(downDir => ({ type: 'down', dir: downDir })),
-  ),
-  sharedKeyup$.pipe(
-    mapKeyboardEventToDirection,
-    map<Direction, UpDown>(upDir => ({ type: 'up', dir: upDir })),
-  ),
-).pipe(
-  scan<UpDown, OrderedSet<Direction>>(
-    (set, { type, dir }) => (type === 'down' ? set.add(dir) : set.remove(dir)),
-    OrderedSet(),
-  ),
-  startWith(OrderedSet()),
-  distinctUntilChanged(is),
-  map<OrderedSet<Direction>, Direction>(set => (set.isEmpty() ? 'idle' : set.last())),
-  shareReplay(1),
-)
-
-const rawDelta$ = interval(0, animationFrameScheduler).pipe(
-  startWith(performance.now()),
-  map(() => performance.now()),
-  pairwise(),
-  map(([prev, cnt]) => cnt - prev),
-)
-
-const paused$ = fromEvent<KeyboardEvent>(document, 'keydown').pipe(
-  filter(e => e.key === 'Escape'),
-  scan<KeyboardEvent, boolean>(not, false),
-  startWith(false),
-  shareReplay(1),
-)
-
-const delta$ = paused$.pipe(
-  switchMap(paused => (paused ? EMPTY : rawDelta$)),
-  share(),
-)
-
-export function getInitMapItems(levelConfig: LevelConfig): List<MapItem> {
-  const M = levelConfig.map.length
-  const N = levelConfig.map[0].length
-  return Range(0, M * N)
-    .map(i => {
-      const row = Math.floor(i / N)
-      const col = i % N
-      const char = levelConfig.map[row][col]
-      if (char === 'X') {
-        return MapItem.obstacle
-      } else if (char === '.') {
-        return MapItem.bean
-      } else if (char === 'D') {
-        return MapItem.door
-      } else if (char === 'P') {
-        return MapItem.powerBean
-      } else if (char === ' ') {
-        return MapItem.empty
-      } else {
-        throw new Error('Invalid map item')
-      }
-    })
-    .toList()
-}
+import { add, between } from './utils/utils'
 
 export default function game(levelConfig: LevelConfig): Observable<Sink> {
   const { M, N } = levelConfig
+
+  const desiredDir$ = getDesiredDir(CONTROL_CONFIG)
+  const paused$ = getPaused(CONTROL_CONFIG).pipe(shareReplay(1))
+  const delta$ = getDeltaFromPaused(paused$).pipe(share())
 
   const nextMapItemsProxy$ = new Subject<List<MapItem>>()
   const mapItems$ = nextMapItemsProxy$.pipe(
@@ -117,13 +45,17 @@ export default function game(levelConfig: LevelConfig): Observable<Sink> {
     shareReplay(1),
   )
 
+  const nextGhostsProxy$ = new Subject<List<Ghost>>()
+  const ghosts$ = nextGhostsProxy$.pipe(
+    startWith(List.of(new Ghost())),
+    shareReplay(1),
+  )
+
   const nextScoreProxy$ = new Subject<number>()
   const score$ = nextScoreProxy$.pipe(
     startWith(0),
     shareReplay(1),
   )
-
-  // const aroundInfoDiv = document.querySelector('#around-info') as HTMLDivElement
 
   const movedPacman$ = delta$.pipe(
     withLatestFrom(desiredDir$, mapItems$, pacman$),
@@ -190,6 +122,7 @@ export default function game(levelConfig: LevelConfig): Observable<Sink> {
     startWith(false),
   )
 
+  // 更新 pacman 的移动距离累计 & 移动状态
   const nextPacman$ = movedPacman$.pipe(
     withLatestFrom(pacman$, isMoving$),
     map(([moved, pacman, isMoving]) => {
@@ -216,6 +149,18 @@ export default function game(levelConfig: LevelConfig): Observable<Sink> {
     }),
     filter(t => t !== -1),
     share(),
+  )
+
+  const powerBeanCountdown$ = eatPowerBean$.pipe(
+    switchMapTo(
+      delta$.pipe(
+        scan((countdown, delta) => countdown - delta, POWER_BEAN_EFFECT_TIMEOUT),
+        startWith(POWER_BEAN_EFFECT_TIMEOUT),
+        takeWhile(countdown => countdown > 0),
+        endWith(0),
+      ),
+    ),
+    startWith(0),
   )
 
   const nextMapItems$ = merge(eatBean$, eatPowerBean$).pipe(
@@ -263,12 +208,14 @@ export default function game(levelConfig: LevelConfig): Observable<Sink> {
   //   filter(Boolean),
   // )
 
-  return combineLatest(pacman$, mapItems$, score$, paused$).pipe(
-    map(([pacman, mapItems, score, paused]) => ({
+  return combineLatest(pacman$, mapItems$, score$, paused$, powerBeanCountdown$, ghosts$).pipe(
+    map(([pacman, mapItems, score, paused, powerBeanCountdown, ghosts]) => ({
       pacman,
       mapItems,
       score,
       paused,
+      powerBeanCountdown,
+      ghosts,
     })),
   )
 

@@ -1,4 +1,5 @@
-import { map } from 'rxjs/operators'
+import { map, tap } from 'rxjs/operators'
+import { TILE_SIZE } from '../constant'
 import Ghost from '../sprites/Ghost'
 import Pacman from '../sprites/Pacman'
 import { Direction, Pos } from '../types'
@@ -43,16 +44,16 @@ import { Direction, Pos } from '../types'
 //   return { path, index: 0 }
 // }
 
-export const mapKeyboardEventToDirection = map<KeyboardEvent, Direction>(e => {
-  if (e.key === 'w') {
-    return 'up'
-  } else if (e.key === 'a') {
-    return 'left'
-  } else if (e.key === 's') {
-    return 'down'
-  } else if (e.key === 'd') {
-    return 'right'
-  } else {
-    return null
+export const not = (a: boolean) => !a
+export const add = (a: number) => (b: number) => a + b
+
+// x 处于 TILE_SIZE 的小数部分是否处于 [min, max] 之间
+export const between = (x: number, min: number, max: number, debug = false) => {
+  if (debug) {
+    debugger
   }
-})
+  const mod = (x % TILE_SIZE) / TILE_SIZE
+  return (min <= mod && mod <= max) || (min - 1 <= mod && mod <= max - 1) || (min + 1 <= mod && mod <= max + 1)
+}
+
+export const debug = <T>(label: string) => tap((value: T) => console.log(`${label}:`, value))

@@ -11,10 +11,10 @@ export default function drawMapItems(ctx: CanvasRenderingContext2D, mapItems: Li
 
   for (let row = 0; row < M; row += 1) {
     for (let col = 0; col < N; col += 1) {
-      const value = get(row, col)
+      const item = get(row, col)
       const x = col * TILE_SIZE
       const y = row * TILE_SIZE
-      if (value === MapItem.obstacle) {
+      if (item === MapItem.obstacle) {
         ctx.strokeStyle = 'blue'
         const code = [0, 0, 0, 0]
         if (
@@ -119,25 +119,28 @@ export default function drawMapItems(ctx: CanvasRenderingContext2D, mapItems: Li
               }
             })
         }
-      } else if (value === MapItem.bean) {
+      } else if (item === MapItem.bean) {
         ctx.fillStyle = '#fff'
         ctx.beginPath()
         ctx.arc(x, y, 2, 0, 2 * Math.PI)
         ctx.fill()
         ctx.closePath()
-      } else if (value === MapItem.powerBean) {
+      } else if (item === MapItem.powerBean) {
         ctx.fillStyle = 'green'
         ctx.beginPath()
         ctx.arc(x, y, 4, 0, 2 * Math.PI)
         ctx.fill()
         ctx.closePath()
-      } else if (value === MapItem.door) {
+      } else if (item === MapItem.door) {
         ctx.strokeStyle = 'white'
         ctx.beginPath()
         ctx.moveTo(x - 8, y)
         ctx.lineTo(x + 8, y)
         ctx.stroke()
         ctx.closePath()
+      } else if (item === MapItem.empty) {
+        ctx.fillStyle = '#2b2b2b'
+        ctx.fillRect(x - 7, y - 7, 14, 14)
       }
     }
   }
