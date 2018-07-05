@@ -2,7 +2,7 @@ import { map, tap } from 'rxjs/operators'
 import { TILE_SIZE } from '../constant'
 import Ghost from '../sprites/Ghost'
 import Pacman from '../sprites/Pacman'
-import { Direction, Pos } from '../types'
+import { Direction, Point, Pos } from '../types'
 
 // export function calPathRouting(ghost: Ghost, pacman: Pacman, map: string[][]) {
 //   const { row, col, dir } = ghost
@@ -57,3 +57,17 @@ export const between = (x: number, min: number, max: number, debug = false) => {
 }
 
 export const debug = <T>(label: string) => tap((value: T) => console.log(`${label}:`, value))
+
+export function pointToPos(point: Point): Pos {
+  return {
+    row: Math.round(point.y / TILE_SIZE),
+    col: Math.round(point.x / TILE_SIZE),
+  }
+}
+
+export function posToPoint(pos: Pos): Point {
+  return {
+    x: pos.col * TILE_SIZE,
+    y: pos.row * TILE_SIZE,
+  }
+}

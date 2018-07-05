@@ -33,7 +33,8 @@ export interface Sink {
   mapItems: List<MapItem>
   paused: boolean
   powerBeanCountdown: number
-  ghosts: List<Ghost>
+  ghostList: List<Ghost>
+  route: Pos[]
 }
 
 export interface ControlConfig {

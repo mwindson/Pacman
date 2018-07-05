@@ -14,9 +14,12 @@ import {
   switchMapTo,
   takeWhile,
   withLatestFrom,
+  groupBy,
+  tap,
 } from 'rxjs/operators'
 import { BEAN_SCORE, CONTROL_CONFIG, POWER_BEAN_EFFECT_TIMEOUT, POWER_BEAN_SCORE, TILE_SIZE } from './constant'
 import { LevelConfig } from './levels'
+import GhostLogic from './logics/GhostLogic'
 import Ghost from './sprites/Ghost'
 import Pacman from './sprites/Pacman'
 import { MapItem, Point, Pos, Sink } from './types'
@@ -24,7 +27,7 @@ import getDesiredDir from './utils/getDesiredDir'
 import getInitMapItems from './utils/getInitConfig'
 import { getDeltaFromPaused, getPaused } from './utils/paused-and-delta'
 import { isOppositeDir } from './utils/pos-utils'
-import { add, between } from './utils/utils'
+import { add, between, debug } from './utils/utils'
 
 export default function game(levelConfig: LevelConfig): Observable<Sink> {
   const { M, N } = levelConfig
@@ -45,11 +48,26 @@ export default function game(levelConfig: LevelConfig): Observable<Sink> {
     shareReplay(1),
   )
 
-  const nextGhostsProxy$ = new Subject<List<Ghost>>()
-  const ghosts$ = nextGhostsProxy$.pipe(
+  const nextGhostListProxy$ = new Subject<List<Ghost>>()
+  const ghostList$ = nextGhostListProxy$.pipe(
     startWith(List.of(new Ghost())),
     shareReplay(1),
+    // tap(x => console.log('ghostList$', String(x))),
   )
+
+  const pinkGhost$ = ghostList$.pipe(
+    map(ghosts => ghosts.find(g => g.color === 'pink')),
+    // debug('pink-ghost'),
+  )
+  const { nextGhost: nextPinkGhost$, route: route$ } = GhostLogic({
+    ghost: pinkGhost$,
+    mapItems: mapItems$,
+    delta: delta$,
+    pacman: pacman$,
+  })
+
+  const nextGhostList$ = nextPinkGhost$.pipe(map(g => List.of(g)))
+  nextGhostList$.subscribe(nextGhostListProxy$)
 
   const nextScoreProxy$ = new Subject<number>()
   const score$ = nextScoreProxy$.pipe(
@@ -208,16 +226,18 @@ export default function game(levelConfig: LevelConfig): Observable<Sink> {
   //   filter(Boolean),
   // )
 
-  return combineLatest(pacman$, mapItems$, score$, paused$, powerBeanCountdown$, ghosts$).pipe(
-    map(([pacman, mapItems, score, paused, powerBeanCountdown, ghosts]) => ({
+  const part1$ = combineLatest(pacman$, mapItems$, score$, paused$, powerBeanCountdown$, ghostList$).pipe(
+    map(([pacman, mapItems, score, paused, powerBeanCountdown, ghostList]) => ({
       pacman,
       mapItems,
       score,
       paused,
       powerBeanCountdown,
-      ghosts,
+      ghostList,
     })),
   )
+
+  return combineLatest(part1$, route$).pipe(map(([part1, route]) => ({ ...part1, route })))
 
   // region function-definitions
   function canMove(mapItems: List<MapItem>, pos: Pos) {
