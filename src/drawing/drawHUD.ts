@@ -1,6 +1,6 @@
-import { Sink } from '../types'
+import { GameLevelSink } from '../logics/GameLevel'
 
-export default function drawHUD(ctx: CanvasRenderingContext2D, sink: Sink) {
+export default function drawHUD(ctx: CanvasRenderingContext2D, sink: GameLevelSink) {
   ctx.save()
   ctx.font = '40px consolas'
   ctx.fillStyle = 'white'
@@ -10,9 +10,9 @@ export default function drawHUD(ctx: CanvasRenderingContext2D, sink: Sink) {
   const countdownPart = String(Math.round(sink.powerBeanCountdown)).padStart(5)
 
   ctx.fillText(`score: ${scorePart} ${pausedPart} ${countdownPart}`, 20, 40)
-  
+
   ctx.strokeStyle = 'white'
   ctx.strokeRect(10, 10, 600, 35)
-  
+
   ctx.restore()
 }

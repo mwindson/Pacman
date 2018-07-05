@@ -138,9 +138,6 @@ export default function drawMapItems(ctx: CanvasRenderingContext2D, mapItems: Li
         ctx.lineTo(x + 8, y)
         ctx.stroke()
         ctx.closePath()
-      } else if (item === MapItem.empty) {
-        ctx.fillStyle = '#2b2b2b'
-        ctx.fillRect(x - 7, y - 7, 14, 14)
       }
     }
   }

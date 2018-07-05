@@ -1,7 +1,7 @@
 import { animationFrameScheduler, EMPTY, fromEvent, interval, Observable } from 'rxjs'
 import { filter, map, pairwise, scan, startWith, switchMap } from 'rxjs/operators'
 import { ControlConfig } from '../types'
-import { not } from './utils'
+import { not } from './common-utils'
 
 export function getPaused(controlConfig: ControlConfig) {
   return fromEvent<KeyboardEvent>(document, 'keydown').pipe(

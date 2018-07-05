@@ -1,7 +1,3 @@
-import { List } from 'immutable'
-import Ghost from './sprites/Ghost'
-import Pacman from './sprites/Pacman'
-
 export type Direction = 'left' | 'right' | 'up' | 'down' | 'idle'
 
 export interface Point {
@@ -25,16 +21,6 @@ export enum MapItem {
   empty,
   obstacle,
   door,
-}
-
-export interface Sink {
-  pacman: Pacman
-  score: number
-  mapItems: List<MapItem>
-  paused: boolean
-  powerBeanCountdown: number
-  ghostList: List<Ghost>
-  route: Pos[]
 }
 
 export interface ControlConfig {

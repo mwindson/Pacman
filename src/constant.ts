@@ -9,6 +9,7 @@ export const BEAN_SCORE = 10
 export const POWER_BEAN_SCORE = 50
 
 export const POWER_BEAN_EFFECT_TIMEOUT = 5000
+export const GHOST_AUTO_ROUTE_INTERVAL = 500
 
 export const CONTROL_CONFIG: ControlConfig = {
   left: 'a',
