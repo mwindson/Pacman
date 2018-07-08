@@ -26,3 +26,18 @@ export function posToPoint(pos: Pos): Point {
     y: pos.row * TILE_SIZE,
   }
 }
+
+export function randint(bound: number) {
+  return Math.floor(Math.random() * bound)
+}
+
+export function shuffle<T>(array: T[]): T[] {
+  const result: T[] = []
+  for (let i = 0; i < array.length; i++) {
+    const r = randint(i + 1)
+    result.push(result[r])
+    result[r] = array[i]
+  }
+
+  return result
+}

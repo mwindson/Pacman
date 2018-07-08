@@ -3,8 +3,8 @@ import { filter, map, scan, switchMap, withLatestFrom } from 'rxjs/operators'
 import { TILE_SIZE } from '../constant'
 import Ghost from '../sprites/Ghost'
 import { Direction, Pos } from '../types'
-import { isOppositeDir } from '../utils/pos-utils'
 import { add, pointToPos, posToPoint } from '../utils/common-utils'
+import { isOppositeDir } from '../utils/pos-utils'
 
 interface RoutingCtx {
   posIndex: number
@@ -13,28 +13,24 @@ interface RoutingCtx {
 
 const initRoutingCtx: RoutingCtx = { posIndex: -1, dir: 'idle' }
 
-export interface FollowRouteSources {
-  route: Observable<Pos[]>
+export interface FollowPathSources {
+  path: Observable<Pos[]>
   ghost: Observable<Ghost>
   delta: Observable<number>
 }
 
-export interface FollowRouteSinks {
+export interface FollowPathSinks {
   nextGhost: Observable<Ghost>
 }
 
-export default function FollowRoute({
-  delta: delta$,
-  ghost: ghost$,
-  route: route$,
-}: FollowRouteSources): FollowRouteSinks {
-  const ghostDesiredDir$ = route$.pipe(
-    switchMap(route =>
+export default function FollowPath({ delta: delta$, ghost: ghost$, path: path$ }: FollowPathSources): FollowPathSinks {
+  const ghostDesiredDir$ = path$.pipe(
+    switchMap(path =>
       ghost$.pipe(
         scan<Ghost, RoutingCtx>((ctx, ghost) => {
-          const nextPos = route[ctx.posIndex + 1]
+          const nextPos = path[ctx.posIndex + 1]
           if (nextPos == null) {
-            // ghost 到达了路径的终点，那就等在原地，等待下一次 route
+            // ghost 到达了路径的终点，那就等在原地，等待下一次路径搜索
             return { posIndex: ctx.posIndex, dir: 'idle' }
           }
           const nextPoint = posToPoint(nextPos)

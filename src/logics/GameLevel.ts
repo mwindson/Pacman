@@ -14,16 +14,15 @@ import {
   takeWhile,
   withLatestFrom,
 } from 'rxjs/operators'
-import { BEAN_SCORE, CONTROL_CONFIG, POWER_BEAN_EFFECT_TIMEOUT, POWER_BEAN_SCORE, TILE_SIZE } from '../constant'
+import { BEAN_SCORE, CONTROL_CONFIG, POWER_BEAN_EFFECT_TIMEOUT, POWER_BEAN_SCORE } from '../constant'
 import { LevelConfig } from '../levels'
-import Ghost from '../sprites/Ghost'
+import Ghost, { GhostColor } from '../sprites/Ghost'
 import Pacman from '../sprites/Pacman'
 import { MapItem, Pos } from '../types'
-import { debug } from '../utils/common-utils'
 import getDesiredDir from '../utils/getDesiredDir'
 import getInitMapItems from '../utils/getInitConfig'
 import { getDeltaFromPaused, getPaused } from '../utils/paused-and-delta'
-import { isCollided, posUtilsFactory } from '../utils/pos-utils'
+import { posUtilsFactory } from '../utils/pos-utils'
 import GhostLogic from './GhostLogic'
 import PacmanLogic from './PacmanLogic'
 
@@ -34,7 +33,10 @@ export interface GameLevelSink {
   paused: boolean
   powerBeanCountdown: number
   ghostList: List<Ghost>
-  route: Pos[]
+  routeList: Array<{
+    color: GhostColor
+    path: Pos[]
+  }>
 }
 
 export default function GameLevel(levelConfig: LevelConfig): Observable<GameLevelSink> {
@@ -58,25 +60,39 @@ export default function GameLevel(levelConfig: LevelConfig): Observable<GameLeve
 
   const nextGhostListProxy$ = new Subject<List<Ghost>>()
   const ghostList$ = nextGhostListProxy$.pipe(
-    startWith(List.of(new Ghost())),
+    startWith(List.of(new Ghost({ color: GhostColor.pink }), new Ghost({ color: GhostColor.green }))),
     shareReplay(1),
     // tap(x => console.log('ghostList$', String(x))),
   )
 
-  // TODO 这里暂时只考虑 pink 的 ghost
-  const pinkGhost$ = ghostList$.pipe(
-    map(ghosts => ghosts.find(g => g.color === 'pink')),
-    // debug('pink-ghost'),
-  )
-  const { nextGhost: nextPinkGhost$, route: route$ } = GhostLogic(posUtils, {
-    ghost: pinkGhost$,
-    mapItems: mapItems$,
-    delta: delta$,
-    pacman: pacman$,
-  })
+  const colors = [GhostColor.pink, GhostColor.green]
 
-  const nextGhostList$ = nextPinkGhost$.pipe(map(g => List.of(g)))
-  nextGhostList$.subscribe(nextGhostListProxy$)
+  const ghostLogicSinks = colors
+    .map(color => ({
+      color,
+      ghost: ghostList$.pipe(
+        map(ghosts => ghosts.find(g => g.color === color)),
+        // debug('pink-ghost'),
+      ),
+    }))
+    .map(({ color, ghost }) => ({
+      color,
+      sink: GhostLogic(posUtils, {
+        ghost,
+        mapItems: mapItems$,
+        delta: delta$,
+        pacman: pacman$,
+      }),
+    }))
+
+  const nextGhostList$ = combineLatest(ghostLogicSinks.map(({ sink }) => sink.nextGhost)).pipe(
+    map(array => List(array)),
+    // debug('next-ghost-list'),
+  )
+
+  const routeList$ = combineLatest(
+    ghostLogicSinks.map(({ color, sink: { path: path$ } }) => path$.pipe(map(path => ({ color, path })))),
+  )
 
   const nextScoreProxy$ = new Subject<number>()
   const score$ = nextScoreProxy$.pipe(
@@ -136,14 +152,15 @@ export default function GameLevel(levelConfig: LevelConfig): Observable<GameLeve
   nextPacman$.subscribe(nextPacmanProxy$)
   nextMapItems$.subscribe(nextMapItemsProxy$)
   nextScore$.subscribe(nextScoreProxy$)
+  nextGhostList$.subscribe(nextGhostListProxy$)
 
   // pacman collide with ghost
-  const collision$ = combineLatest(ghostList$, pacman$).pipe(
-    sample(delta$),
-    filter(([ghostList, pacman]) => ghostList.some(ghost => isCollided(ghost, pacman))),
-    debug('collision!'),
-  )
-  collision$.subscribe()
+  // const collision$ = combineLatest(ghostList$, pacman$).pipe(
+  //   sample(delta$),
+  //   filter(([ghostList, pacman]) => ghostList.some(ghost => isCollided(ghost, pacman))),
+  //   debug('collision!'),
+  // )
+  // collision$.subscribe()
 
   const part1$ = combineLatest(pacman$, mapItems$, score$, paused$, powerBeanCountdown$, ghostList$).pipe(
     map(([pacman, mapItems, score, paused, powerBeanCountdown, ghostList]) => ({
@@ -156,5 +173,5 @@ export default function GameLevel(levelConfig: LevelConfig): Observable<GameLeve
     })),
   )
 
-  return combineLatest(part1$, route$).pipe(map(([part1, route]) => ({ ...part1, route })))
+  return combineLatest(part1$, routeList$).pipe(map(([part1, routeList]) => ({ ...part1, routeList })))
 }

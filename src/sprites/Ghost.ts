@@ -2,12 +2,17 @@ import { Record } from 'immutable'
 import { GHOST_SPEED, TILE_SIZE } from '../constant'
 import { Direction, Speed } from '../types'
 
+export enum GhostColor {
+  pink = 'pink',
+  green = 'green',
+}
+
 export default class Ghost extends Record({
   x: 15 * TILE_SIZE,
   y: 14 * TILE_SIZE,
   dir: 'up' as Direction,
   frameIndex: 0,
-  color: 'pink',
+  color: GhostColor.pink,
 }) {
   getSpeed(): Speed {
     if (this.dir === 'left') {

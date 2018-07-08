@@ -2,14 +2,14 @@ import { List } from 'immutable'
 import { combineLatest, Observable } from 'rxjs'
 import { filter, map, sample, scan, startWith } from 'rxjs/operators'
 import { GHOST_AUTO_ROUTE_INTERVAL } from '../constant'
-import Ghost from '../sprites/Ghost'
+import Ghost, { GhostColor } from '../sprites/Ghost'
 import Pacman from '../sprites/Pacman'
 import { MapItem, Pos } from '../types'
-import { pointToPos } from '../utils/common-utils'
+import { pointToPos, shuffle } from '../utils/common-utils'
 import { PosUtils } from '../utils/pos-utils'
-import FollowRoute from './FollowRoute'
+import FollowPath from './FollowPath'
 
-type GhostLogicSources = {
+interface GhostLogicSources {
   ghost: Observable<Ghost>
   mapItems: Observable<List<MapItem>>
   delta: Observable<number>
@@ -18,7 +18,7 @@ type GhostLogicSources = {
 
 interface GhostLogicSinks {
   nextGhost: Observable<Ghost>
-  route: Observable<Pos[]>
+  path: Observable<Pos[]>
 }
 
 export default function GhostLogic(
@@ -38,25 +38,64 @@ export default function GhostLogic(
     startWith(null),
   )
 
-  const route$ = combineLatest(ghost$, mapItems$, pacman$).pipe(
+  const path$ = combineLatest(ghost$, mapItems$, pacman$).pipe(
     sample(routeTick$),
     map(([ghost, mapItems, pacman]) => {
       const startPos = pointToPos(ghost)
       const endPos = pointToPos(pacman)
-      return findShortestPath(startPos, endPos, mapItems)
+      if (ghost.color === GhostColor.pink) {
+        return findShortestPath(startPos, endPos, mapItems)
+      } else {
+        return findRandomPath(startPos, endPos, mapItems)
+      }
     }),
   )
 
-  const { nextGhost: nextGhost$ } = FollowRoute({
-    route: route$,
+  const { nextGhost: nextGhost$ } = FollowPath({
+    path: path$,
     ghost: ghost$,
     delta: delta$,
   })
 
-  return { nextGhost: nextGhost$, route: route$ }
+  return { nextGhost: nextGhost$, path: path$ }
 
   // region function-definition
-  function findShortestPath(startPos: Pos, endPos: Pos, mapItems: List<MapItem>) {
+  function findRandomPath(startPos: Pos, endPos: Pos, mapItems: List<MapItem>): Pos[] {
+    const visited = new Set<number>()
+    const path: Pos[] = []
+    dfs(toIndex(startPos))
+    return path
+
+    function dfs(cntIndex: number) {
+      visited.add(cntIndex)
+      if (cntIndex === toIndex(endPos) || path.length >= 20) {
+        return true
+      }
+      const cntPos = toPos(cntIndex)
+      for (const dirFn of shuffle([left, right, up, down])) {
+        const nextPos = dirFn(cntPos)
+        if (nextPos == null) {
+          // 超出了边界
+          continue
+        }
+        const nextIndex = toIndex(nextPos)
+        if (
+          mapItems.get(nextIndex) !== MapItem.obstacle && // 该位置没有障碍物
+          !visited.has(nextIndex) // 该位置没有被访问过
+        ) {
+          path.push(nextPos)
+          if (dfs(nextIndex)) {
+            return true
+          }
+          path.pop()
+        }
+      }
+      visited.delete(cntIndex)
+      return false
+    }
+  }
+
+  function findShortestPath(startPos: Pos, endPos: Pos, mapItems: List<MapItem>): Pos[] {
     const prevMap = new Map<number, number>()
     prevMap.set(toIndex(startPos), -1)
 
@@ -67,7 +106,10 @@ export default function GhostLogic(
         const cntPos = toPos(cntI)
         for (const dirFn of [left, right, up, down]) {
           const nextPos = dirFn(cntPos)
-          if (nextPos == null) continue // 超出了边界
+          if (nextPos == null) {
+            // 超出了边界
+            continue
+          }
           const nextI = toIndex(nextPos)
           if (
             mapItems.get(nextI) !== MapItem.obstacle && // 该位置没有障碍物
