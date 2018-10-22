@@ -30,20 +30,7 @@ export function isCollided(p1: Point, p2: Point) {
   return Math.abs(p1.x - p2.x) <= 0.2 * TILE_SIZE && Math.abs(p1.y - p2.y) <= 0.2 * TILE_SIZE
 }
 
-export interface PosUtils {
-  canMove(mapItems: List<MapItem>, pos: Pos): boolean
-  getAroundInfo(mapItems: List<MapItem>, pos: Pos): { left: boolean; right: boolean; up: boolean; down: boolean }
-  left(pos: Pos): Pos
-  right(pos: Pos): Pos
-  up(pos: Pos): Pos
-  down(pos: Pos): Pos
-  getMapItemIndex(point: Point): number
-  toIndex(p: Pos): number
-  toPos(index: number): Pos
-}
-
-// TODO 将对应的 interface 写出来
-export function posUtilsFactory({ M, N }: LevelConfig): PosUtils {
+export function posUtilsFactory({ M, N }: LevelConfig) {
   function canMove(mapItems: List<MapItem>, pos: Pos) {
     if (pos == null) {
       return false
@@ -107,3 +94,5 @@ export function posUtilsFactory({ M, N }: LevelConfig): PosUtils {
 
   return { canMove, getAroundInfo, left, right, up, down, getMapItemIndex, toPos, toIndex }
 }
+
+export type PosUtils = ReturnType<typeof posUtilsFactory>

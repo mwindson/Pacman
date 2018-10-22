@@ -11,13 +11,13 @@ module.exports = {
 
   output: {
     path: path.resolve(__dirname, 'build', packageInfo.version),
-    filename: '[name].js'
+    filename: '[name].js',
   },
 
   mode: 'development',
   resolve: {
     modules: [path.resolve(__dirname, 'src'), 'node_modules'],
-    extensions: ['.ts', '.tsx', '.js', '.json']
+    extensions: ['.ts', '.tsx', '.js', '.json'],
   },
 
   module: {
@@ -25,32 +25,30 @@ module.exports = {
       {
         test: /\.tsx?$/,
         use: ['ts-loader'],
-        exclude: /node_modules/
+        exclude: /node_modules/,
       },
       {
         test: /\.css$/,
-        loaders: ['style-loader', 'css-loader']
+        loaders: ['style-loader', 'css-loader'],
       },
       {
         test: /\.styl$/,
-        loaders: ['style-loader', 'css-loader', 'stylus-loader']
-      }
-    ]
+        loaders: ['style-loader', 'css-loader', 'stylus-loader'],
+      },
+    ],
   },
 
   plugins: [
     new HtmlWebpackPlugin({
       filename: 'index.html',
-      template: path.resolve(__dirname, 'src/index.tmpl.html')
+      template: path.resolve(__dirname, 'src/index.tmpl.html'),
       // chunks: ['commons', 'main'],
     }),
-    new webpack.HotModuleReplacementPlugin()
+    new webpack.HotModuleReplacementPlugin(),
   ],
 
   devServer: {
     contentBase: __dirname,
-    host: '0.0.0.0',
     hot: true,
-    port: 8080
-  }
+  },
 }
