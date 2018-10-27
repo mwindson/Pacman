@@ -7,7 +7,7 @@ module.exports = {
   context: __dirname,
   target: 'web',
 
-  entry: [__dirname + '/src/index.ts'],
+  entry: [__dirname + '/src/index.tsx'],
 
   output: {
     path: path.resolve(__dirname, 'build', packageInfo.version),
