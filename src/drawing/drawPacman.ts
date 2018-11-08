@@ -1,6 +1,9 @@
 import Pacman from '../sprites/Pacman'
 
 export default function drawPacman(ctx: CanvasRenderingContext2D, pacman: Pacman) {
+  if (pacman == null) {
+    return
+  }
   const { x, y, dir, movedDistance, isMoving } = pacman
   const frameIndex = isMoving ? (movedDistance % 30 < 15 ? 1 : 0) : 0
   ctx.save()

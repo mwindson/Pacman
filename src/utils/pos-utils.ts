@@ -92,7 +92,20 @@ export function posUtilsFactory({ M, N }: LevelConfig) {
     return { row: Math.floor(i / N), col: i % N }
   }
 
-  return { canMove, getAroundInfo, left, right, up, down, getMapItemIndex, toPos, toIndex }
+  const directions = [left, right, up, down]
+
+  return {
+    canMove,
+    getAroundInfo,
+    left,
+    right,
+    up,
+    down,
+    getMapItemIndex,
+    toPos,
+    toIndex,
+    directions,
+  }
 }
 
 export type PosUtils = ReturnType<typeof posUtilsFactory>

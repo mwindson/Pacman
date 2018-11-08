@@ -1,7 +1,7 @@
 import { Observable } from 'rxjs'
 import { filter, map, scan, switchMap, withLatestFrom } from 'rxjs/operators'
 import { TILE_SIZE } from '../constant'
-import Ghost from '../sprites/Ghost'
+import Ghost from '../sprites/ghosts'
 import { Direction, Pos } from '../types'
 import { add, pointToPos, posToPoint } from '../utils/common-utils'
 import { isOppositeDir } from '../utils/pos-utils'

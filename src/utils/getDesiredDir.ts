@@ -22,7 +22,10 @@ function mapKeyboardEventToDirection(controlConfig: ControlConfig) {
 const keyup$ = fromEvent<KeyboardEvent>(document, 'keydown')
 const keydown$ = fromEvent<KeyboardEvent>(document, 'keyup')
 
-type UpDown = { type: 'down' | 'up'; dir: Direction }
+interface UpDown {
+  type: 'down' | 'up'
+  dir: Direction
+}
 
 export default function getDesiredDir(controlConfig: ControlConfig) {
   return merge(

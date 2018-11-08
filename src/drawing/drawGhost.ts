@@ -1,4 +1,4 @@
-import Ghost from '../sprites/Ghost'
+import Ghost from '../sprites/ghosts'
 
 const width = 30
 const height = 30

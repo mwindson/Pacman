@@ -1,6 +1,6 @@
 import { List } from 'immutable'
 import { Observable } from 'rxjs'
-import { map, pairwise, startWith, withLatestFrom } from 'rxjs/operators'
+import { map, pairwise, sample, startWith, withLatestFrom } from 'rxjs/operators'
 import { TILE_SIZE } from '../constant'
 import Pacman from '../sprites/Pacman'
 import { Direction, MapItem } from '../types'
@@ -20,7 +20,12 @@ export interface PacmanLogicSinks {
 
 export default function PacmanLogic(
   { getAroundInfo }: PosUtils,
-  { delta: delta$, desiredDir: desiredDir$, mapItems: mapItems$, pacman: pacman$ }: PacmanLogicSources,
+  {
+    delta: delta$,
+    desiredDir: desiredDir$,
+    mapItems: mapItems$,
+    pacman: pacman$,
+  }: PacmanLogicSources,
 ): PacmanLogicSinks {
   const movedPacman$ = delta$.pipe(
     withLatestFrom(desiredDir$, mapItems$, pacman$),
@@ -79,9 +84,8 @@ export default function PacmanLogic(
     }),
   )
 
-  const isMoving$ = delta$.pipe(
-    withLatestFrom(pacman$),
-    map(([delta, pacman]) => pacman),
+  const isMoving$ = pacman$.pipe(
+    sample(delta$),
     pairwise(),
     map(([prev, cnt]) => prev.movedDistance !== cnt.movedDistance),
     startWith(false),
