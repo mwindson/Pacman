@@ -8,7 +8,7 @@ import drawMapItems from './drawMapItems'
 import drawPacman from './drawPacman'
 
 // TODO 测试用
-function drawRoute(ctx: CanvasRenderingContext2D, color: string, path: Pos[]) {
+function drawGhostPaths(ctx: CanvasRenderingContext2D, color: string, path: Pos[]) {
   ctx.save()
 
   for (const pos of path) {
@@ -24,7 +24,11 @@ function drawRoute(ctx: CanvasRenderingContext2D, color: string, path: Pos[]) {
   ctx.restore()
 }
 
-export default function drawAll(ctx: CanvasRenderingContext2D, sink: GameLevelSink, config: LevelConfig) {
+export default function drawAll(
+  ctx: CanvasRenderingContext2D,
+  sink: GameLevelSink,
+  config: LevelConfig,
+) {
   ctx.save()
 
   ctx.fillStyle = 'black'
@@ -38,8 +42,8 @@ export default function drawAll(ctx: CanvasRenderingContext2D, sink: GameLevelSi
   drawPacman(ctx, sink.pacman)
   sink.ghostList.forEach(ghost => drawGhost(ctx, ghost))
 
-  sink.routeList.forEach(({ color, path }) => {
-    drawRoute(ctx, color, path)
+  sink.pathInfoList.forEach(({ color, path }) => {
+    drawGhostPaths(ctx, color, path)
   })
 
   ctx.restore()

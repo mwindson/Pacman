@@ -1,5 +1,5 @@
 import { List } from 'immutable'
-import { combineLatest, merge, Observable, of, Subject } from 'rxjs'
+import { BehaviorSubject, combineLatest, concat, merge, Observable, of, Subject } from 'rxjs'
 import {
   delay,
   endWith,
@@ -28,8 +28,10 @@ import { LevelConfig } from '../levels'
 import Ghost, { GhostColor } from '../sprites/ghosts'
 import Pacman from '../sprites/Pacman'
 import { MapItem, Pos } from '../types'
+import { debug } from '../utils/common-utils'
 import getDesiredDir from '../utils/getDesiredDir'
 import getInitMapItems from '../utils/getInitConfig'
+import { when, whenNot } from '../utils/my-operators'
 import { getDeltaFromPaused, getPaused } from '../utils/paused-and-delta'
 import { isCollided, posUtilsFactory } from '../utils/pos-utils'
 import PacmanLogic from './PacmanLogic'
@@ -42,7 +44,7 @@ export interface GameLevelSink {
   paused: boolean
   powerBeanCountdown: number
   ghostList: List<Ghost>
-  routeList: Array<{
+  pathInfoList: Array<{
     color: GhostColor
     path: Pos[]
   }>
@@ -52,86 +54,88 @@ export default function GameLevel(levelConfig: LevelConfig): Observable<GameLeve
   const posUtils = posUtilsFactory(levelConfig)
   const { getMapItemIndex } = posUtils
 
-  const paused$ = getPaused(CONTROL_CONFIG).pipe(shareReplay(1))
-  const delta$ = getDeltaFromPaused(paused$).pipe(share())
-  const gameStart$ = of<'game-start'>('game-start')
+  const pacman$ = new BehaviorSubject<Pacman>(null)
+  const pinkGhost$ = new BehaviorSubject<Ghost>(null)
+  const pinkPath$ = new BehaviorSubject<Pos[]>([])
+  const mapItems$ = new BehaviorSubject(getInitMapItems(levelConfig))
+  const score$ = new BehaviorSubject(0)
 
-  const nextMapItemsProxy$ = new Subject<List<MapItem>>()
-  const mapItems$ = nextMapItemsProxy$.pipe(
-    startWith(getInitMapItems(levelConfig)),
+  const paused$ = getPaused(CONTROL_CONFIG).pipe(
+    debug('paused'),
+    shareReplay(1),
+  )
+  const delta$ = getDeltaFromPaused(paused$).pipe(share())
+  const levelStart$ = of<'game-start'>('game-start')
+
+  const roundEnd$ = new Subject<any>()
+  const roundStart$ = merge(levelStart$, roundEnd$.pipe(delay(RESET_POSITIONS_DELAY)))
+  const inRound$ = merge(roundStart$.pipe(mapTo(true)), roundEnd$.pipe(mapTo(false))).pipe(
     shareReplay(1),
   )
 
-  const roundEnd$ = new Subject<any>()
-  const roundStart$ = merge(gameStart$, roundEnd$.pipe(delay(RESET_POSITIONS_DELAY)))
+  roundStart$.pipe(mapTo(new Ghost({ color: GhostColor.pink }))).subscribe(pinkGhost$)
+  roundStart$.pipe(mapTo(new Pacman())).subscribe(pacman$)
 
-  const pinkGhost$ = roundStart$.pipe(
-    switchMap(() => {
-      const innerNextGhost$ = new Subject<Ghost>()
-      const innerPinkGhost$ = innerNextGhost$.pipe(
-        startWith(new Ghost({ color: GhostColor.pink })),
-        shareReplay(1),
-      )
+  const pinkGhostLogicSink = roundStart$.pipe(
+    map(() => {
       const logic = PinkGhostLogic(posUtils, {
-        ghost: innerPinkGhost$,
+        ghost: pinkGhost$,
         delta: delta$,
         mapItems: mapItems$,
         pacman: pacman$,
       })
-      logic.nextGhost.subscribe(innerNextGhost$)
-      return innerPinkGhost$.pipe(
-        takeUntil(roundEnd$),
-        endWith(new Ghost({ color: GhostColor.pink })), // 待在原地不动
-      )
+      return {
+        nextPinkGhost: logic.nextGhost.pipe(
+          takeUntil(roundEnd$),
+          endWith(new Ghost({ color: GhostColor.pink })),
+        ),
+        pinkPath: logic.path.pipe(
+          takeUntil(roundEnd$),
+          endWith([]),
+        ),
+      }
     }),
-    shareReplay(1),
   )
+
+  const nextPinkGhost$ = pinkGhostLogicSink.pipe(
+    switchMap(({ nextPinkGhost: nextPinkGhost$ }) => nextPinkGhost$),
+  )
+  nextPinkGhost$.subscribe(pinkGhost$)
+
+  const nextPinkPath$ = pinkGhostLogicSink.pipe(switchMap(({ pinkPath: pinkPath$ }) => pinkPath$))
+  nextPinkPath$.subscribe(pinkPath$)
 
   // todo green ghost
 
   const ghostList$ = combineLatest(pinkGhost$ /* greenGhost */).pipe(
     map(arr => List(arr)),
-    // debug('ghost-list'),
-  )
-
-  // const pinkRoute$ = pinkGhostLogicSinks.path
-
-  const routeList$: Observable<Array<{ color: GhostColor; path: Pos[] }>> = of([]).pipe()
-  // pinkRoute$.pipe(map(path => ({ color: GhostColor.pink, path }))),
-  /* greenRoute$ */
-
-  const nextScoreProxy$ = new Subject<number>()
-  const score$ = nextScoreProxy$.pipe(
-    startWith(0),
     shareReplay(1),
   )
 
-  const pacman$ = merge(gameStart$, roundStart$).pipe(
+  const pathInfoList$: Observable<Array<{ color: GhostColor; path: Pos[] }>> = combineLatest(
+    pinkPath$.pipe(map(path => ({ color: GhostColor.pink, path }))),
+    /* greenRoute$ */
+  )
+
+  const nextPacman$ = merge(levelStart$, roundStart$).pipe(
     switchMap(() => {
-      const innerNextPacman$ = new Subject<Pacman>()
-      const innerPacman$ = innerNextPacman$.pipe(
-        startWith(new Pacman()),
-        shareReplay(1),
-      )
-      const pacmanLogic = PacmanLogic(posUtils, {
+      const logic = PacmanLogic(posUtils, {
         delta: delta$,
         mapItems: mapItems$,
         desiredDir: getDesiredDir(CONTROL_CONFIG),
-        pacman: innerPacman$,
+        pacman: pacman$,
       })
-      pacmanLogic.nextPacman.subscribe(innerNextPacman$)
-
-      return innerPacman$.pipe(
+      return logic.nextPacman.pipe(
         takeUntil(roundEnd$),
         endWith(null),
       )
     }),
   )
+  nextPacman$.subscribe(pacman$)
 
   const eatBean$ = combineLatest(mapItems$, pacman$).pipe(
     sample(delta$),
-    // todo
-    filter(([mapItems, pacman]) => Boolean(pacman)),
+    when(inRound$),
     map(([mapItems, pacman]) => {
       const t = getMapItemIndex(pacman)
       return mapItems.get(t) === MapItem.bean ? t : -1
@@ -142,7 +146,7 @@ export default function GameLevel(levelConfig: LevelConfig): Observable<GameLeve
 
   const eatPowerBean$ = combineLatest(mapItems$, pacman$).pipe(
     sample(delta$),
-    filter(([mapItems, pacman]) => Boolean(pacman)),
+    when(inRound$),
     map(([mapItems, pacman]) => {
       const t = getMapItemIndex(pacman)
       return mapItems.get(t) === MapItem.powerBean ? t : -1
@@ -151,6 +155,7 @@ export default function GameLevel(levelConfig: LevelConfig): Observable<GameLeve
     share(),
   )
 
+  // 能量豆子的持续时间
   const powerBeanCountdown$ = eatPowerBean$.pipe(
     switchMapTo(
       delta$.pipe(
@@ -161,19 +166,30 @@ export default function GameLevel(levelConfig: LevelConfig): Observable<GameLeve
       ),
     ),
     startWith(0),
+    shareReplay(1),
   )
 
-  // 与 pacman 碰在一起的 ghost，可能为 null/undefined
-  const collidedGhost$ = combineLatest(ghostList$, pacman$).pipe(
-    map(([ghostList, pacman]) => pacman && ghostList.find(ghost => isCollided(ghost, pacman))),
+  // pacman 当前是否拥有能量豆子效果
+  const inPowerBeanMode$ = powerBeanCountdown$.pipe(
+    map(cd => cd > 0),
+    shareReplay(1),
   )
 
-  const hurtByGhost$ = combineLatest(collidedGhost$, powerBeanCountdown$).pipe(
+  // pacman 与 ghost 发生碰撞
+  const collision$ = combineLatest(ghostList$, pacman$).pipe(
     sample(delta$),
-    filter(([collidedGhost, cd]) => Boolean(collidedGhost) && cd === 0),
+    when(inRound$),
+    map(([ghostList, pacman]) => ghostList.find(ghost => isCollided(ghost, pacman))),
+    filter(ghost => Boolean(ghost)),
   )
 
-  hurtByGhost$.pipe(mapTo<any, 'reset-start'>('reset-start')).subscribe(roundEnd$)
+  const hurtByGhost$ = collision$.pipe(whenNot(inPowerBeanMode$))
+
+  // 每次 pacman 碰到 ghost 受到伤害时，当前回合就结束了
+  hurtByGhost$.subscribe(roundEnd$)
+
+  // TODO
+  const killGhost$ = collision$.pipe(when(inPowerBeanMode$))
 
   const nextMapItems$ = merge(eatBean$, eatPowerBean$).pipe(
     withLatestFrom(mapItems$),
@@ -188,22 +204,18 @@ export default function GameLevel(levelConfig: LevelConfig): Observable<GameLeve
     map(([score, add]) => score + add),
   )
 
-  nextMapItems$.subscribe(nextMapItemsProxy$)
-  nextScore$.subscribe(nextScoreProxy$)
+  nextMapItems$.subscribe(mapItems$)
+  nextScore$.subscribe(score$)
 
   const hud$ = combineLatest(score$, paused$, powerBeanCountdown$).pipe(
     map(([score, paused, powerBeanCountdown]) => ({ score, paused, powerBeanCountdown })),
   )
-
   const entities$ = combineLatest(pacman$, ghostList$, mapItems$).pipe(
     map(([pacman, ghostList, mapItems]) => ({ pacman, ghostList, mapItems })),
   )
-
-  const testings$ = combineLatest(routeList$).pipe(map(([routeList]) => ({ routeList })))
-
+  const testings$ = combineLatest(pathInfoList$).pipe(map(([pathInfoList]) => ({ pathInfoList })))
   const sink = combineLatest(hud$, entities$, testings$).pipe(
     map(([hud, entities, testings]) => ({ ...hud, ...entities, ...testings })),
   )
-
   return sink
 }
