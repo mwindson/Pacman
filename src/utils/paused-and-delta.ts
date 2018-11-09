@@ -1,13 +1,10 @@
 import { animationFrameScheduler, EMPTY, fromEvent, interval, Observable } from 'rxjs'
-import { filter, map, pairwise, scan, startWith, switchMap } from 'rxjs/operators'
+import { filter, map, pairwise, startWith, switchMap } from 'rxjs/operators'
 import { ControlConfig } from '../types'
-import { not } from './common-utils'
 
-export function getPaused(controlConfig: ControlConfig) {
+export function togglePauseStatus(controlConfig: ControlConfig) {
   return fromEvent<KeyboardEvent>(document, 'keydown').pipe(
     filter(e => e.key === controlConfig.pause),
-    scan<KeyboardEvent, boolean>(not, false),
-    startWith(false),
   )
 }
 

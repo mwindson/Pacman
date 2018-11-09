@@ -7,7 +7,7 @@ export default function drawHUD(ctx: CanvasRenderingContext2D, sink: GameLevelSi
 
   const scorePart = String(sink.score).padEnd(5)
   const pausedPart = sink.paused ? 'paused' : '      '
-  const countdownPart = String(Math.round(sink.powerBeanCountdown)).padStart(5)
+  const countdownPart = String(Math.round(sink.powerBeanDuration)).padStart(5)
 
   ctx.fillText(`score: ${scorePart} ${pausedPart} ${countdownPart}`, 20, 40)
 

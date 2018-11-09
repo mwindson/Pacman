@@ -8,7 +8,11 @@ export const add = (a: number) => (b: number) => a + b
 // x 处于 TILE_SIZE 的小数部分是否处于 [min, max] 之间
 export const between = (x: number, min: number, max: number) => {
   const mod = (x % TILE_SIZE) / TILE_SIZE
-  return (min <= mod && mod <= max) || (min - 1 <= mod && mod <= max - 1) || (min + 1 <= mod && mod <= max + 1)
+  return (
+    (min <= mod && mod <= max) ||
+    (min - 1 <= mod && mod <= max - 1) ||
+    (min + 1 <= mod && mod <= max + 1)
+  )
 }
 
 export const debug = <T>(label: string) => tap((value: T) => console.log(`${label}:`, value))
